@@ -92,4 +92,13 @@ final class AnthropicProviderTests: XCTestCase {
             XCTAssertEqual(message, "Rate limit exceeded")
         }
     }
+
+    func testLiveAnthropicGeneration() async throws {
+        guard let apiKey = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"], !apiKey.isEmpty else {
+            throw XCTSkip("Set ANTHROPIC_API_KEY to run the live Anthropic integration test.")
+        }
+        let liveProvider = AnthropicProvider(apiKey: apiKey, model: "claude-3-5-sonnet-latest")
+        let response = try await liveProvider.generate("Reply with exactly: ok")
+        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
 }

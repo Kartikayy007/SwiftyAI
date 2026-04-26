@@ -84,15 +84,12 @@ final class GroqProviderTests: XCTestCase {
         guard let apiKey = ProcessInfo.processInfo.environment["GROQ_API_KEY"], !apiKey.isEmpty else {
             throw XCTSkip("Set GROQ_API_KEY to run the live Groq integration test.")
         }
-
         let liveProvider = OpenAICompatibleProvider(
             baseURL: "https://api.groq.com/openai/v1",
             apiKey: apiKey,
             model: "llama-3.3-70b-versatile"
         )
-
-        let response = try await liveProvider.generate("Reply with exactly: hello from groq")
-        print(response.text)
-        XCTAssertFalse(response.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty)
+        let response = try await liveProvider.generate("Reply with exactly: ok")
+        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 }

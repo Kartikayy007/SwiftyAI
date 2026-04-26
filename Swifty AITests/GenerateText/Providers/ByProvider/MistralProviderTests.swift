@@ -1,16 +1,16 @@
 import XCTest
 @testable import Swifty_AI
 
-final class OpenAIProviderTests: XCTestCase {
+final class MistralProviderTests: XCTestCase {
     private var provider: OpenAICompatibleProvider!
 
     override func setUp() {
         super.setUp()
         MockURLProtocol.handler = nil
         provider = OpenAICompatibleProvider(
-            baseURL: "https://api.openai.com/v1",
+            baseURL: "https://api.mistral.ai/v1",
             apiKey: "test-key",
-            model: "gpt-4o",
+            model: "mistral-large-latest",
             session: .mock
         )
     }
@@ -18,17 +18,17 @@ final class OpenAIProviderTests: XCTestCase {
     func testSuccessfulGeneration() async throws {
         MockURLProtocol.handler = { _ in
             try mockResponse(statusCode: 200, json: [
-                "model": "gpt-4o",
-                "choices": [["message": ["content": "Hello from OpenAI"], "finish_reason": "stop"]],
-                "usage": ["prompt_tokens": 10, "completion_tokens": 20]
+                "model": "mistral-large-latest",
+                "choices": [["message": ["content": "Hello from Mistral"], "finish_reason": "stop"]],
+                "usage": ["prompt_tokens": 9, "completion_tokens": 11]
             ])
         }
         let response = try await provider.generate("Hi")
-        XCTAssertEqual(response.text, "Hello from OpenAI")
-        XCTAssertEqual(response.model, "gpt-4o")
+        XCTAssertEqual(response.text, "Hello from Mistral")
+        XCTAssertEqual(response.model, "mistral-large-latest")
         XCTAssertEqual(response.finishReason, "stop")
-        XCTAssertEqual(response.usage?.inputTokens, 10)
-        XCTAssertEqual(response.usage?.outputTokens, 20)
+        XCTAssertEqual(response.usage?.inputTokens, 9)
+        XCTAssertEqual(response.usage?.outputTokens, 11)
     }
 
     func testSendsCorrectAuthHeader() async throws {
@@ -52,19 +52,19 @@ final class OpenAIProviderTests: XCTestCase {
             ])
         }
         _ = try await provider.generate("Hi")
-        XCTAssertEqual(capturedRequest?.url?.absoluteString, "https://api.openai.com/v1/chat/completions")
+        XCTAssertEqual(capturedRequest?.url?.absoluteString, "https://api.mistral.ai/v1/chat/completions")
     }
 
     func testAPIErrorThrowsCorrectly() async throws {
         MockURLProtocol.handler = { _ in
-            try mockResponse(statusCode: 401, json: ["error": ["message": "Invalid API key"]])
+            try mockResponse(statusCode: 401, json: ["error": ["message": "Unauthorized"]])
         }
         do {
             _ = try await provider.generate("Hi")
             XCTFail("Expected apiError")
         } catch AIError.apiError(let statusCode, let message) {
             XCTAssertEqual(statusCode, 401)
-            XCTAssertEqual(message, "Invalid API key")
+            XCTAssertEqual(message, "Unauthorized")
         }
     }
 
@@ -80,8 +80,16 @@ final class OpenAIProviderTests: XCTestCase {
         }
     }
 
-    func testPublicInitAllowsCustomBaseURL() {
-        let custom = OpenAICompatibleProvider(baseURL: "https://api.together.xyz/v1", apiKey: "key", model: "llama3")
-        XCTAssertNotNil(custom)
+    func testLiveMistralGeneration() async throws {
+        guard let apiKey = ProcessInfo.processInfo.environment["MISTRAL_API_KEY"], !apiKey.isEmpty else {
+            throw XCTSkip("Set MISTRAL_API_KEY to run the live Mistral integration test.")
+        }
+        let liveProvider = OpenAICompatibleProvider(
+            baseURL: "https://api.mistral.ai/v1",
+            apiKey: apiKey,
+            model: "mistral-large-latest"
+        )
+        let response = try await liveProvider.generate("Reply with exactly: ok")
+        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 }

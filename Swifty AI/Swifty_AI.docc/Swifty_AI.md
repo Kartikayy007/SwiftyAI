@@ -6,15 +6,7 @@ The current library surface is intentionally simple:
 
 - Create a provider that conforms to ``AIModel``.
 - Call ``generateText(model:prompt:)`` with a prompt.
-- Read the returned ``AIResponse/text`` value.
-
-At the moment, the package supports:
-
-- OpenAI via ``OpenAIProvider``
-- Anthropic via ``AnthropicProvider``
-- Gemini via ``GeminiProvider``
-
-It does not currently expose streaming, structured output, tool calling, or agent workflows.
+- Read the returned ``AIResponse`` value.
 
 ## Overview
 
@@ -26,84 +18,143 @@ public protocol AIModel: Sendable {
 }
 ```
 
-For most usage, you do not call `generate(_:)` directly. Instead, use the shared helper:
+For most usage, call the shared helper:
 
 ```swift
 let response = try await generateText(model: model, prompt: "Explain async/await in Swift.")
 print(response.text)
 ```
 
-## Create a Model
-
-Use the static factory helpers on ``AIModel`` to construct a provider:
-
-```swift
-let openAIModel = AIModel.openAI(
-    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
-    model: "gpt-4o-mini"
-)
-
-let anthropicModel = AIModel.anthropic(
-    apiKey: ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"]!,
-    model: "claude-3-5-sonnet-latest"
-)
-
-let geminiModel = AIModel.gemini(
-    apiKey: ProcessInfo.processInfo.environment["GEMINI_API_KEY"]!,
-    model: "gemini-1.5-flash"
-)
-```
-
-Each provider requires:
-
-- an API key for that vendor
-- a model name string accepted by that vendor's API
-
-## Generate Text
-
-Once you have a model, generate text with ``generateText(model:prompt:)``:
-
-```swift
-import Foundation
-
-func runExample() async {
-    let model = AIModel.openAI(
-        apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
-        model: "gpt-4o-mini"
-    )
-
-    do {
-        let response = try await generateText(
-            model: model,
-            prompt: "Write a two-sentence summary of Swift concurrency."
-        )
-
-        print(response.text)
-    } catch {
-        print(error.localizedDescription)
-    }
-}
-```
-
-The response type is:
+The response includes text plus optional metadata:
 
 ```swift
 public struct AIResponse: Sendable {
     public let text: String
+    public let model: String?
+    public let usage: TokenUsage?
+    public let finishReason: String?
+}
+
+public struct TokenUsage: Sendable {
+    public let inputTokens: Int
+    public let outputTokens: Int
+}
+```
+
+## Providers
+
+### OpenAI
+
+```swift
+let model = AIModel.openAI(
+    apiKey: "sk-...",
+    model: "gpt-4o"
+)
+```
+
+### Anthropic
+
+```swift
+let model = AIModel.anthropic(
+    apiKey: "sk-ant-...",
+    model: "claude-3-5-sonnet-latest"
+)
+```
+
+### Google Gemini
+
+```swift
+let model = AIModel.gemini(
+    apiKey: "AIza...",
+    model: "gemini-2.5-flash"
+)
+```
+
+### Groq
+
+```swift
+let model = AIModel.groq(
+    apiKey: "gsk_...",
+    model: "llama-3.3-70b-versatile"
+)
+```
+
+### OpenRouter
+
+```swift
+let model = AIModel.openRouter(
+    apiKey: "sk-or-...",
+    model: "meta-llama/llama-3.3-70b-instruct:free"
+)
+```
+
+### Mistral
+
+```swift
+let model = AIModel.mistral(
+    apiKey: "...",
+    model: "mistral-large-latest"
+)
+```
+
+### Cohere
+
+Uses Cohere's OpenAI-compatibility endpoint.
+
+```swift
+let model = AIModel.cohere(
+    apiKey: "...",
+    model: "command-r-plus"
+)
+```
+### Cloudflare Workers AI
+
+Requires your Cloudflare account ID (found in the Workers dashboard).
+
+```swift
+let model = AIModel.cloudflare(
+    accountID: "abc123...",
+    apiKey: "...",
+    model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+)
+```
+
+### Custom OpenAI-compatible backend
+
+Any backend that speaks the OpenAI `/chat/completions` format:
+
+```swift
+let model = OpenAICompatibleProvider(
+    baseURL: "https://your-backend.com/v1",
+    apiKey: "your-key",
+    model: "your-model"
+)
+```
+
+## Generate Text
+
+```swift
+do {
+    let response = try await generateText(
+        model: model,
+        prompt: "Write a two-sentence summary of Swift concurrency."
+    )
+    print(response.text)
+    print("Tokens used:", response.usage?.outputTokens ?? 0)
+} catch {
+    print(error.localizedDescription)
 }
 ```
 
 ## Error Handling
 
-Requests can throw ``AIError``:
+Requests throw ``AIError``:
 
-- ``AIError/networkError(_:)`` when the HTTP request fails
-- ``AIError/invalidResponse`` when the provider response is missing expected fields
-- ``AIError/encodingError(_:)`` when request encoding fails
-- ``AIError/decodingError(_:)`` when response decoding fails
-- ``AIError/apiError(statusCode:message:)`` when the provider returns a non-2xx status
-
-Example:
+- ``AIError/networkError(_:)`` — HTTP request failed
+- ``AIError/invalidResponse`` — response missing expected fields
+- ``AIError/encodingError(_:)`` — request encoding failed
+- ``AIError/decodingError(_:)`` — response decoding failed
+- ``AIError/apiError(statusCode:message:)`` — provider returned non-2xx status
 
 ```swift
 do {
@@ -115,3 +166,27 @@ do {
     print(error.localizedDescription)
 }
 ```
+
+## Topics
+
+### Core
+
+- ``AIModel``
+- ``AIResponse``
+- ``TokenUsage``
+- ``AIError``
+
+### Generation
+
+- ``generateText(model:prompt:)``
+
+### Providers
+
+- ``OpenAICompatibleProvider``
+- ``AnthropicProvider``
+- ``GeminiProvider``
+- ``GroqProvider``
+- ``OpenRouterProvider``
+- ``MistralProvider``
+- ``CohereProvider``
+- ``CloudflareProvider``

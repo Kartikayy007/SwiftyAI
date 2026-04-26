@@ -71,7 +71,7 @@ Package.resolved
 
 # Tooling
 # Uncomment the line below if you don't want to push AI instruction files
-# CLAUDE.md
+CLAUDE.md
 .claudesettings
 
 # macOS
