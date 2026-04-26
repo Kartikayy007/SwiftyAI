@@ -6,6 +6,8 @@ public enum AIError: Error, Sendable {
     case encodingError(Error)
     case decodingError(Error)
     case apiError(statusCode: Int, message: String)
+    case providerNotConfigured(String)
+    case invalidModelString(String)
 }
 
 extension AIError: LocalizedError {
@@ -21,6 +23,10 @@ extension AIError: LocalizedError {
             return "Failed to decode response: \(error.localizedDescription)"
         case .apiError(let statusCode, let message):
             return "API error \(statusCode): \(message)"
+        case .providerNotConfigured(let provider):
+            return "Provider '\(provider)' not configured — call AI.configure { $0.\(provider)(apiKey:) } at app startup"
+        case .invalidModelString(let model):
+            return "Invalid model string '\(model)' — use 'provider/model' format, e.g. 'openai/gpt-4o-mini'"
         }
     }
 }

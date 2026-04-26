@@ -7,15 +7,32 @@ public final class SwiftyChat {
     public var isStreaming: Bool = false
     public var error: Error? = nil
 
-    private let model: any AIStreamModel
+    private var _model: (any AIStreamModel)?
+    private let modelString: String?
     private let systemPrompt: String?
     private let maxMessages: Int?
     private var streamTask: Task<Void, Never>?
 
     public init(model: any AIStreamModel, systemPrompt: String? = nil, maxMessages: Int? = nil) {
-        self.model = model
+        self._model = model
+        self.modelString = nil
         self.systemPrompt = systemPrompt
         self.maxMessages = maxMessages
+    }
+
+    public init(model modelString: String, systemPrompt: String? = nil, maxMessages: Int? = nil) {
+        self._model = nil
+        self.modelString = modelString
+        self.systemPrompt = systemPrompt
+        self.maxMessages = maxMessages
+    }
+
+    private func resolveModel() async throws -> any AIStreamModel {
+        if let m = _model { return m }
+        guard let s = modelString else { fatalError("SwiftyChat: no model set") }
+        let m = try await AIRegistry.shared.resolve(s)
+        _model = m
+        return m
     }
 
     public func send(_ text: String) async throws {
@@ -30,7 +47,8 @@ public final class SwiftyChat {
         messages.append(ChatMessage(role: .assistant, content: ""))
         let assistantIndex = messages.count - 1
 
-        let stream = model.stream(messages: history)
+        let resolvedModel = try await resolveModel()
+        let stream = resolvedModel.stream(messages: history)
 
         do {
             for try await chunk in stream {

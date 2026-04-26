@@ -4,13 +4,90 @@ Provider-agnostic AI SDK for Apple platforms. Zero mandatory dependencies.
 
 ## Overview
 
-Pick a provider, call `generateText`, read the response. That's it.
+Configure once, use everywhere — no API key at every call site.
 
 ```swift
-let model = AIModel.openAI(apiKey: "sk-...", model: "gpt-4o")
+// AppDelegate / @main — once
+AI.configure {
+    $0.openAI(apiKey: "sk-...")
+    $0.anthropic(apiKey: "sk-ant-...")
+}
 
-let response = try await generateText(model: model, prompt: "Explain async/await in Swift.")
+// Anywhere in your app
+let response = try await generateText(model: "openai/gpt-4o-mini", prompt: "Explain async/await in Swift.")
 print(response.text)
+```
+
+Or pass a provider directly — both styles work:
+
+```swift
+let response = try await generateText(
+    model: .openAI(apiKey: "sk-...", model: "gpt-4o-mini"),
+    prompt: "Explain async/await in Swift."
+)
+```
+
+---
+
+## AI.configure (Registry)
+
+Set API keys once at startup. Then use model strings (`"provider/model"`) everywhere — no key at call sites.
+
+```swift
+// In AppDelegate, @main body, or app init
+AI.configure {
+    $0.openAI(apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!)
+    $0.anthropic(apiKey: "sk-ant-...")
+    $0.gemini(apiKey: "AIza...")
+    $0.groq(apiKey: "gsk_...")
+    $0.openRouter(apiKey: "sk-or-...")
+    $0.mistral(apiKey: "...")
+    $0.cohere(apiKey: "...")
+    $0.cloudflare(accountID: "abc123", apiKey: "...")
+    $0.ollama()  // no key — local
+}
+```
+
+Supported model string format: `"provider/model-name"`
+
+| String prefix | Provider |
+|---|---|
+| `"openai/..."` | OpenAI |
+| `"anthropic/..."` | Anthropic |
+| `"gemini/..."` | Google Gemini |
+| `"groq/..."` | Groq |
+| `"openrouter/..."` | OpenRouter |
+| `"mistral/..."` | Mistral |
+| `"cohere/..."` | Cohere |
+| `"cloudflare/..."` | Cloudflare Workers AI |
+| `"ollama/..."` | Ollama (local, no key needed) |
+
+```swift
+// generateText
+let response = try await generateText(model: "openai/gpt-4o-mini", prompt: "Hello")
+
+// streamText
+for try await chunk in streamText(model: "anthropic/claude-sonnet-4-6", prompt: "Tell me a story.") {
+    print(chunk.text, terminator: "")
+}
+
+// generateObject
+let movie: Movie = try await generateObject(model: "gemini/gemini-2.5-flash", prompt: "Sci-fi movie", as: Movie.self).object
+
+// SwiftyChat
+let chat = SwiftyChat(model: "groq/llama-3.3-70b-versatile", systemPrompt: "Be helpful.")
+```
+
+### Error handling for registry
+
+```swift
+do {
+    let response = try await generateText(model: "openai/gpt-4o-mini", prompt: "Hello")
+} catch AIError.providerNotConfigured(let provider) {
+    print("Call AI.configure { $0.\(provider)(apiKey:) } at startup")
+} catch AIError.invalidModelString(let s) {
+    print("Bad model string '\(s)' — use 'provider/model' format")
+}
 ```
 
 ---
@@ -92,6 +169,10 @@ do {
     print("Could not decode response:", error.localizedDescription)
 } catch AIError.encodingError(let error) {
     print("Could not encode request:", error.localizedDescription)
+} catch AIError.providerNotConfigured(let provider) {
+    print("'\(provider)' not configured — call AI.configure at startup")
+} catch AIError.invalidModelString(let s) {
+    print("Bad model string '\(s)' — use 'provider/model' format")
 }
 ```
 
@@ -134,6 +215,17 @@ Cancellation is supported — wrapping in a `Task` and calling `.cancel()` stops
 ## SwiftyChat
 
 `SwiftyChat` is an `@Observable` class that manages a full multi-turn chat session. It handles message history, streaming, and state — so your SwiftUI view stays simple.
+
+With the registry (configure once at startup):
+
+```swift
+@State private var chat = SwiftyChat(
+    model: "groq/llama-3.3-70b-versatile",
+    systemPrompt: "You are a helpful assistant."
+)
+```
+
+Or with a direct provider:
 
 ```swift
 @State private var chat = SwiftyChat(
@@ -257,16 +349,67 @@ public struct ChatMessage: Sendable, Identifiable {
 
 ## generateText
 
-The top-level function. Works with any `AIModel`.
+Works with any `AIModel` — direct provider or registry string.
 
 ```swift
 let response = try await generateText(
-    model: model,
+    model: "openai/gpt-4o-mini",
     prompt: "Write a two-sentence summary of Swift concurrency."
 )
 print(response.text)
 print("Tokens used:", response.usage?.outputTokens ?? 0)
 ```
+
+---
+
+## generateObject
+
+Returns a decoded Swift struct. No manual JSON parsing.
+
+Define your type conforming to `JSONSchemaConvertible`:
+
+```swift
+struct Movie: Codable, JSONSchemaConvertible, Sendable {
+    let title: String
+    let year: Int
+    let genre: String
+
+    static var schemaName: String { "movie" }
+    static var jsonSchema: [String: Any] {
+        ["type": "object",
+         "properties": [
+             "title": ["type": "string"],
+             "year":  ["type": "integer"],
+             "genre": ["type": "string"]
+         ],
+         "required": ["title", "year", "genre"]]
+    }
+}
+```
+
+Call `generateObject`:
+
+```swift
+let result = try await generateObject(
+    model: "openai/gpt-4o-mini",
+    prompt: "Suggest a classic sci-fi movie"
+)
+print(result.object.title)           // "2001: A Space Odyssey"
+print(result.usage?.outputTokens ?? 0)
+```
+
+`ObjectResponse<T>` wraps the decoded object and preserves provider metadata:
+
+```swift
+public struct ObjectResponse<T: Decodable & Sendable>: Sendable {
+    public let object: T
+    public let usage: TokenUsage?
+    public let finishReason: String?
+    public let model: String?
+}
+```
+
+Note: V1 uses prompt injection — the schema is appended to the prompt and the response is decoded. Markdown fences (` ```json ``` `) are stripped automatically. Extra keys returned by the LLM are silently ignored by `JSONDecoder`.
 
 ---
 
@@ -445,6 +588,11 @@ print(response.text)
 
 ## Topics
 
+### Registry
+
+- ``AI``
+- ``AIConfiguration``
+
 ### Core
 
 - ``AIModel``
@@ -464,6 +612,9 @@ print(response.text)
 
 - ``generateText(model:prompt:)``
 - ``streamText(model:prompt:)``
+- ``generateObject(model:prompt:as:)``
+- ``ObjectResponse``
+- ``JSONSchemaConvertible``
 
 ### Providers
 
