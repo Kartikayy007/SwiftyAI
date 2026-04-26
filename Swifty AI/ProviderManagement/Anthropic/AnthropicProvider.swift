@@ -21,6 +21,7 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
             model: model,
             maxTokens: 1024,
             messages: [.init(role: "user", content: prompt)],
+            system: nil,
             stream: false
         )
 
@@ -47,7 +48,19 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
         }
     }
 
+    public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        let system = messages.first(where: { $0.role == .system })?.content
+        let convo = messages
+            .filter { $0.role != .system }
+            .map { Request.Message(role: $0.role.rawValue, content: $0.content) }
+        return streamSSE(messages: convo, system: system)
+    }
+
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        streamSSE(messages: [.init(role: "user", content: prompt)], system: nil)
+    }
+
+    private func streamSSE(messages: [Request.Message], system: String?) -> AsyncThrowingStream<AIStreamChunk, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
@@ -59,7 +72,8 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
                 let body = Request(
                     model: model,
                     maxTokens: 1024,
-                    messages: [.init(role: "user", content: prompt)],
+                    messages: messages,
+                    system: system,
                     stream: true
                 )
                 do {
@@ -119,12 +133,14 @@ private extension AnthropicProvider {
         let model: String
         let maxTokens: Int
         let messages: [Message]
+        let system: String?
         let stream: Bool
 
         enum CodingKeys: String, CodingKey {
             case model
             case maxTokens = "max_tokens"
             case messages
+            case system
             case stream
         }
 

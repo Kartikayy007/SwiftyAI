@@ -48,7 +48,15 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel {
         }
     }
 
+    public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        streamSSE(messages: messages.map { .init(role: $0.role.rawValue, content: $0.content) })
+    }
+
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        streamSSE(messages: [.init(role: "user", content: prompt)])
+    }
+
+    private func streamSSE(messages: [Request.Message]) -> AsyncThrowingStream<AIStreamChunk, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 guard let url = URL(string: "\(baseURL)/chat/completions") else {
@@ -63,7 +71,7 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel {
 
                 let body = Request(
                     model: model,
-                    messages: [.init(role: "user", content: prompt)],
+                    messages: messages,
                     stream: true,
                     streamOptions: .init(includeUsage: true)
                 )
@@ -73,8 +81,6 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel {
                     continuation.finish(throwing: AIError.encodingError(error))
                     return
                 }
-
-                var finalUsage: TokenUsage?
 
                 do {
                     for try await jsonString in sseLines(request: request, session: session) {
@@ -86,9 +92,10 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel {
                         do {
                             let chunk = try JSONDecoder().decode(StreamChunk.self, from: data)
 
-                            // Usage-only chunk (choices is empty)
+                            // Usage-only chunk (choices is empty) — emit as final chunk with usage
                             if let u = chunk.usage, chunk.choices.isEmpty {
-                                finalUsage = TokenUsage(inputTokens: u.promptTokens, outputTokens: u.completionTokens)
+                                let usage = TokenUsage(inputTokens: u.promptTokens, outputTokens: u.completionTokens)
+                                continuation.yield(AIStreamChunk(text: "", finishReason: nil, usage: usage))
                                 continue
                             }
 
@@ -97,7 +104,7 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel {
                             let finishReason = choice.finishReason
 
                             if finishReason != nil {
-                                continuation.yield(AIStreamChunk(text: text, finishReason: finishReason, usage: finalUsage))
+                                continuation.yield(AIStreamChunk(text: text, finishReason: finishReason, usage: nil))
                             } else if !text.isEmpty {
                                 continuation.yield(AIStreamChunk(text: text, finishReason: nil, usage: nil))
                             }

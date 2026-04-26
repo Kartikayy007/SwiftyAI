@@ -25,6 +25,17 @@ public struct AppleFoundationProvider: AIModel, AIStreamModel {
         }
     }
 
+    public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        let formatted = messages.map { msg in
+            switch msg.role {
+            case .system: return "System: \(msg.content)"
+            case .user: return "User: \(msg.content)"
+            case .assistant: return "Assistant: \(msg.content)"
+            }
+        }.joined(separator: "\n")
+        return stream(formatted)
+    }
+
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
         AsyncThrowingStream { continuation in
             Task {

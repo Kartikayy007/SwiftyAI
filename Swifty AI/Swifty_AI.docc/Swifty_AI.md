@@ -131,6 +131,130 @@ Cancellation is supported — wrapping in a `Task` and calling `.cancel()` stops
 
 ---
 
+## SwiftyChat
+
+`SwiftyChat` is an `@Observable` class that manages a full multi-turn chat session. It handles message history, streaming, and state — so your SwiftUI view stays simple.
+
+```swift
+@State private var chat = SwiftyChat(
+    model: .groq(apiKey: "gsk_...", model: "llama-3.3-70b-versatile"),
+    systemPrompt: "You are a helpful assistant."
+)
+```
+
+### Sending messages
+
+```swift
+try await chat.send("What is Swift?")
+```
+
+Every `send()` call:
+1. Appends the user message to `chat.messages`
+2. Streams the assistant reply token-by-token into a new assistant message
+3. Sets `isStreaming = false` when done
+
+### Reading state
+
+```swift
+chat.messages      // [ChatMessage] — full history, auto-updates during streaming
+chat.isStreaming   // Bool — true while tokens are arriving
+chat.error         // Error? — set if the stream throws
+```
+
+### SwiftUI example
+
+```swift
+struct ChatView: View {
+    @State private var chat = SwiftyChat(
+        model: .openAI(apiKey: "sk-...", model: "gpt-4o-mini")
+    )
+    @State private var input = ""
+
+    var body: some View {
+        VStack {
+            ScrollView {
+                ForEach(chat.messages) { message in
+                    HStack {
+                        if message.role == .user { Spacer() }
+                        Text(message.content)
+                            .padding(10)
+                            .background(message.role == .user ? Color.blue : Color.gray.opacity(0.2))
+                            .foregroundStyle(message.role == .user ? .white : .primary)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        if message.role == .assistant { Spacer() }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+
+            HStack {
+                TextField("Message...", text: $input)
+                    .textFieldStyle(.roundedBorder)
+                Button("Send") {
+                    let text = input
+                    input = ""
+                    Task { try? await chat.send(text) }
+                }
+                .disabled(chat.isStreaming || input.isEmpty)
+            }
+            .padding()
+        }
+    }
+}
+```
+
+### Multi-turn conversation
+
+History is managed automatically. Every `send()` passes the full `messages` array to the provider — the model sees the entire conversation.
+
+```swift
+try await chat.send("My name is Kartikay")
+try await chat.send("What's my name?")  // model answers: "Kartikay"
+```
+
+### System prompt
+
+Set once at init, injected as the first message on every request:
+
+```swift
+let chat = SwiftyChat(
+    model: .anthropic(apiKey: "...", model: "claude-haiku-4-5-20251001"),
+    systemPrompt: "Reply only in haiku form."
+)
+```
+
+### Limiting history (context window)
+
+Use `maxMessages` to cap how many messages are sent per request:
+
+```swift
+let chat = SwiftyChat(model: .openAI(apiKey: "...", model: "gpt-4o"), maxMessages: 20)
+```
+
+Oldest messages are trimmed first. System prompt (if set) is always included regardless of the limit.
+
+### Stop and clear
+
+```swift
+chat.stop()   // cancel in-flight stream, keep partial message in history
+chat.clear()  // wipe all messages and reset state
+```
+
+### ChatMessage
+
+Each message in `chat.messages` is a `ChatMessage`:
+
+```swift
+public struct ChatMessage: Sendable, Identifiable {
+    public let id: String
+    public let role: ChatRole       // .user, .assistant, .system
+    public var content: String
+    public let createdAt: Date
+}
+```
+
+---
+
 ## generateText
 
 The top-level function. Works with any `AIModel`.
@@ -329,6 +453,12 @@ print(response.text)
 - ``AIStreamChunk``
 - ``TokenUsage``
 - ``AIError``
+
+### Chat
+
+- ``SwiftyChat``
+- ``ChatMessage``
+- ``ChatRole``
 
 ### Generation
 

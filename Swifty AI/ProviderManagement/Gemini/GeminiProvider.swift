@@ -17,7 +17,7 @@ public struct GeminiProvider: AIModel, AIStreamModel {
             throw AIError.invalidResponse
         }
         let headers = ["x-goog-api-key": apiKey]
-        let body = Request(contents: [.init(parts: [.init(text: prompt)])])
+        let body = Request(contents: [.init(role: "user", parts: [.init(text: prompt)])], systemInstruction: nil)
 
         let data = try await httpPost(url: url, headers: headers, body: body, session: session)
 
@@ -42,7 +42,30 @@ public struct GeminiProvider: AIModel, AIStreamModel {
         }
     }
 
+    public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        let systemText = messages.first(where: { $0.role == .system })?.content
+        let contents = messages
+            .filter { $0.role != .system }
+            .map { msg in
+                Request.Content(
+                    role: msg.role == .assistant ? "model" : "user",
+                    parts: [.init(text: msg.content)]
+                )
+            }
+        let systemInstruction = systemText.map {
+            Request.SystemInstruction(parts: [.init(text: $0)])
+        }
+        return streamSSE(contents: contents, systemInstruction: systemInstruction)
+    }
+
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        streamSSE(
+            contents: [.init(role: "user", parts: [.init(text: prompt)])],
+            systemInstruction: nil
+        )
+    }
+
+    private func streamSSE(contents: [Request.Content], systemInstruction: Request.SystemInstruction?) -> AsyncThrowingStream<AIStreamChunk, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 let urlString = "https://generativelanguage.googleapis.com/v1beta/models/\(model):streamGenerateContent?alt=sse"
@@ -56,7 +79,7 @@ public struct GeminiProvider: AIModel, AIStreamModel {
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
 
-                let body = Request(contents: [.init(parts: [.init(text: prompt)])])
+                let body = Request(contents: contents, systemInstruction: systemInstruction)
                 do {
                     request.httpBody = try JSONEncoder().encode(body)
                 } catch {
@@ -103,8 +126,23 @@ public struct GeminiProvider: AIModel, AIStreamModel {
 private extension GeminiProvider {
     struct Request: Encodable {
         let contents: [Content]
+        let systemInstruction: SystemInstruction?
+
+        enum CodingKeys: String, CodingKey {
+            case contents
+            case systemInstruction = "system_instruction"
+        }
 
         struct Content: Encodable {
+            let role: String
+            let parts: [Part]
+
+            struct Part: Encodable {
+                let text: String
+            }
+        }
+
+        struct SystemInstruction: Encodable {
             let parts: [Part]
 
             struct Part: Encodable {

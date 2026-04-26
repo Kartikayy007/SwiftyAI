@@ -11,8 +11,22 @@ final class MockURLProtocol: URLProtocol {
             client?.urlProtocol(self, didFailWithError: URLError(.unknown))
             return
         }
+        // URLSession moves httpBody to httpBodyStream for async requests — read from both
+        var req = request
+        if req.httpBody == nil, let stream = req.httpBodyStream {
+            stream.open()
+            var data = Data()
+            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 4096)
+            defer { buffer.deallocate() }
+            while stream.hasBytesAvailable {
+                let count = stream.read(buffer, maxLength: 4096)
+                if count > 0 { data.append(buffer, count: count) }
+            }
+            stream.close()
+            req.httpBody = data
+        }
         do {
-            let (response, data) = try handler(request)
+            let (response, data) = try handler(req)
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: data)
             client?.urlProtocolDidFinishLoading(self)

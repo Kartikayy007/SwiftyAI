@@ -1,5 +1,13 @@
 public protocol AIStreamModel: AIModel {
     func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error>
+    func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error>
+}
+
+public extension AIStreamModel {
+    func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        let prompt = messages.last(where: { $0.role == .user })?.content ?? ""
+        return stream(prompt)
+    }
 }
 
 public extension AIStreamModel where Self == OpenAICompatibleProvider {
