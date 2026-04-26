@@ -24,6 +24,7 @@ CodeCoverage/
 
 # Unit-test results
 *.xcresult
+*.xctestplan
 
 # Xcode 6.3+ Project Snippets
 *.xcscmblueprint
@@ -33,6 +34,14 @@ CodeCoverage/
 
 # AppCode
 .idea/
+
+# Secrets & Environment
+# (Essential for AI SDKs to avoid leaking API keys)
+.env
+.env.*
+Secrets.swift
+Config.local.swift
+*.xcconfig.local
 
 # Swift Package Manager
 #
@@ -59,6 +68,11 @@ Package.resolved
 # occupy large amount of storage and represent an un-mergeable binary diff.
 # fastlane/screenshots
 # fastlane/test_output
+
+# Tooling
+# Uncomment the line below if you don't want to push AI instruction files
+# CLAUDE.md
+.claudesettings
 
 # macOS
 #

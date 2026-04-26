@@ -6,14 +6,34 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		931E9EF72F9E060A00354E65 /* Swifty_AI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 931E9E872F9D7ED200354E65 /* Swifty_AI.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		931E9EF82F9E060A00354E65 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 931E9E7E2F9D7ED200354E65 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 931E9E862F9D7ED200354E65;
+			remoteInfo = "Swifty AI";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		931E9E872F9D7ED200354E65 /* Swifty_AI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Swifty_AI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		931E9EF32F9E060A00354E65 /* Swifty AITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Swifty AITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		931E9E892F9D7ED200354E65 /* Swifty AI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Swifty AI";
+			sourceTree = "<group>";
+		};
+		931E9EF42F9E060A00354E65 /* Swifty AITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Swifty AITests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -26,6 +46,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		931E9EF02F9E060A00354E65 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				931E9EF72F9E060A00354E65 /* Swifty_AI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -33,6 +61,7 @@
 			isa = PBXGroup;
 			children = (
 				931E9E892F9D7ED200354E65 /* Swifty AI */,
+				931E9EF42F9E060A00354E65 /* Swifty AITests */,
 				931E9E882F9D7ED200354E65 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				931E9E872F9D7ED200354E65 /* Swifty_AI.framework */,
+				931E9EF32F9E060A00354E65 /* Swifty AITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -81,6 +111,29 @@
 			productReference = 931E9E872F9D7ED200354E65 /* Swifty_AI.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		931E9EF22F9E060A00354E65 /* Swifty AITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 931E9EFC2F9E060A00354E65 /* Build configuration list for PBXNativeTarget "Swifty AITests" */;
+			buildPhases = (
+				931E9EEF2F9E060A00354E65 /* Sources */,
+				931E9EF02F9E060A00354E65 /* Frameworks */,
+				931E9EF12F9E060A00354E65 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				931E9EF92F9E060A00354E65 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				931E9EF42F9E060A00354E65 /* Swifty AITests */,
+			);
+			name = "Swifty AITests";
+			packageProductDependencies = (
+			);
+			productName = "Swifty AITests";
+			productReference = 931E9EF32F9E060A00354E65 /* Swifty AITests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -92,6 +145,9 @@
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					931E9E862F9D7ED200354E65 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					931E9EF22F9E060A00354E65 = {
 						CreatedOnToolsVersion = 26.3;
 					};
 				};
@@ -111,12 +167,20 @@
 			projectRoot = "";
 			targets = (
 				931E9E862F9D7ED200354E65 /* Swifty AI */,
+				931E9EF22F9E060A00354E65 /* Swifty AITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		931E9E852F9D7ED200354E65 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		931E9EF12F9E060A00354E65 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -133,7 +197,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		931E9EEF2F9E060A00354E65 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		931E9EF92F9E060A00354E65 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 931E9E862F9D7ED200354E65 /* Swifty AI */;
+			targetProxy = 931E9EF82F9E060A00354E65 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		931E9E8E2F9D7ED200354E65 /* Debug */ = {
@@ -348,6 +427,54 @@
 			};
 			name = Release;
 		};
+		931E9EFA2F9E060A00354E65 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3V9DH6TBUG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "kartikay.Swifty-AITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		931E9EFB2F9E060A00354E65 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3V9DH6TBUG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "kartikay.Swifty-AITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -365,6 +492,15 @@
 			buildConfigurations = (
 				931E9E912F9D7ED200354E65 /* Debug */,
 				931E9E922F9D7ED200354E65 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		931E9EFC2F9E060A00354E65 /* Build configuration list for PBXNativeTarget "Swifty AITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				931E9EFA2F9E060A00354E65 /* Debug */,
+				931E9EFB2F9E060A00354E65 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

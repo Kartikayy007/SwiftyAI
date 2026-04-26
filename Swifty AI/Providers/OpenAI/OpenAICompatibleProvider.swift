@@ -1,25 +1,25 @@
 import Foundation
 
-public struct AnthropicProvider: AIModel {
+public struct OpenAICompatibleProvider: AIModel {
+    private let baseURL: String
     private let apiKey: String
     private let model: String
     let session: URLSession
 
-    public init(apiKey: String, model: String, session: URLSession = .shared) {
+    public init(baseURL: String, apiKey: String, model: String, session: URLSession = .shared) {
+        self.baseURL = baseURL
         self.apiKey = apiKey
         self.model = model
         self.session = session
     }
 
     public func generate(_ prompt: String) async throws -> AIResponse {
-        let url = URL(string: "https://api.anthropic.com/v1/messages")!
-        let headers = [
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01"
-        ]
+        guard let url = URL(string: "\(baseURL)/chat/completions") else {
+            throw AIError.invalidResponse
+        }
+        let headers = ["Authorization": "Bearer \(apiKey)"]
         let body = Request(
             model: model,
-            maxTokens: 1024,
             messages: [.init(role: "user", content: prompt)]
         )
 
@@ -27,17 +27,17 @@ public struct AnthropicProvider: AIModel {
 
         do {
             let decoded = try JSONDecoder().decode(Response.self, from: data)
-            guard let text = decoded.content.first(where: { $0.type == "text" })?.text else {
+            guard let choice = decoded.choices.first else {
                 throw AIError.invalidResponse
             }
             let usage = decoded.usage.map {
-                TokenUsage(inputTokens: $0.inputTokens, outputTokens: $0.outputTokens)
+                TokenUsage(inputTokens: $0.promptTokens, outputTokens: $0.completionTokens)
             }
             return AIResponse(
-                text: text,
+                text: choice.message.content,
                 model: decoded.model,
                 usage: usage,
-                finishReason: decoded.stopReason
+                finishReason: choice.finishReason
             )
         } catch let error as AIError {
             throw error
@@ -47,17 +47,10 @@ public struct AnthropicProvider: AIModel {
     }
 }
 
-private extension AnthropicProvider {
+private extension OpenAICompatibleProvider {
     struct Request: Encodable {
         let model: String
-        let maxTokens: Int
         let messages: [Message]
-
-        enum CodingKeys: String, CodingKey {
-            case model
-            case maxTokens = "max_tokens"
-            case messages
-        }
 
         struct Message: Encodable {
             let role: String
@@ -67,29 +60,30 @@ private extension AnthropicProvider {
 
     struct Response: Decodable {
         let model: String?
-        let content: [ContentBlock]
-        let stopReason: String?
+        let choices: [Choice]
         let usage: Usage?
 
-        enum CodingKeys: String, CodingKey {
-            case model
-            case content
-            case stopReason = "stop_reason"
-            case usage
-        }
+        struct Choice: Decodable {
+            let message: Message
+            let finishReason: String?
 
-        struct ContentBlock: Decodable {
-            let type: String
-            let text: String?
+            enum CodingKeys: String, CodingKey {
+                case message
+                case finishReason = "finish_reason"
+            }
+
+            struct Message: Decodable {
+                let content: String
+            }
         }
 
         struct Usage: Decodable {
-            let inputTokens: Int
-            let outputTokens: Int
+            let promptTokens: Int
+            let completionTokens: Int
 
             enum CodingKeys: String, CodingKey {
-                case inputTokens = "input_tokens"
-                case outputTokens = "output_tokens"
+                case promptTokens = "prompt_tokens"
+                case completionTokens = "completion_tokens"
             }
         }
     }

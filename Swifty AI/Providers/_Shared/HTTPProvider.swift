@@ -1,6 +1,6 @@
 import Foundation
 
-func httpPost(url: URL, headers: [String: String], body: Encodable) async throws -> Data {
+func httpPost(url: URL, headers: [String: String], body: Encodable, session: URLSession = .shared) async throws -> Data {
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -16,7 +16,7 @@ func httpPost(url: URL, headers: [String: String], body: Encodable) async throws
 
     let (data, response): (Data, URLResponse)
     do {
-        (data, response) = try await URLSession.shared.data(for: request)
+        (data, response) = try await session.data(for: request)
     } catch {
         throw AIError.networkError(error)
     }

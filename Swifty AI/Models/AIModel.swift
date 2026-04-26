@@ -2,9 +2,13 @@ public protocol AIModel: Sendable {
     func generate(_ prompt: String) async throws -> AIResponse
 }
 
-public extension AIModel where Self == OpenAIProvider {
-    static func openAI(apiKey: String, model: String) -> OpenAIProvider {
-        OpenAIProvider(apiKey: apiKey, model: model)
+public extension AIModel where Self == OpenAICompatibleProvider {
+    static func openAI(apiKey: String, model: String) -> OpenAICompatibleProvider {
+        OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: apiKey, model: model)
+    }
+
+    static func groq(apiKey: String, model: String) -> OpenAICompatibleProvider {
+        OpenAICompatibleProvider(baseURL: "https://api.groq.com/openai/v1", apiKey: apiKey, model: model)
     }
 }
 
