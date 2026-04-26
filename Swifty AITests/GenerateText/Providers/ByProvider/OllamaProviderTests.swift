@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Swifty_AI
 
 final class OllamaProviderTests: XCTestCase {
@@ -17,11 +18,15 @@ final class OllamaProviderTests: XCTestCase {
 
     func testSuccessfulGeneration() async throws {
         MockURLProtocol.handler = { _ in
-            try mockResponse(statusCode: 200, json: [
-                "model": "llama3.2",
-                "choices": [["message": ["content": "Hello from Ollama"], "finish_reason": "stop"]],
-                "usage": ["prompt_tokens": 8, "completion_tokens": 12]
-            ])
+            try mockResponse(
+                statusCode: 200,
+                json: [
+                    "model": "llama3.2",
+                    "choices": [
+                        ["message": ["content": "Hello from Ollama"], "finish_reason": "stop"]
+                    ],
+                    "usage": ["prompt_tokens": 8, "completion_tokens": 12],
+                ])
         }
         let response = try await provider.generate("Hi")
         XCTAssertEqual(response.text, "Hello from Ollama")
@@ -35,21 +40,26 @@ final class OllamaProviderTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await provider.generate("Hi")
-        XCTAssertEqual(capturedRequest?.url?.absoluteString, "http://localhost:11434/v1/chat/completions")
+        XCTAssertEqual(
+            capturedRequest?.url?.absoluteString, "http://localhost:11434/v1/chat/completions")
     }
 
     func testSendsCorrectAuthHeader() async throws {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await provider.generate("Hi")
         XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer ollama")
@@ -65,12 +75,15 @@ final class OllamaProviderTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await customProvider.generate("Hi")
-        XCTAssertEqual(capturedRequest?.url?.absoluteString, "http://localhost:8080/v1/chat/completions")
+        XCTAssertEqual(
+            capturedRequest?.url?.absoluteString, "http://localhost:8080/v1/chat/completions")
     }
 
     func testAPIErrorThrowsCorrectly() async throws {
@@ -100,7 +113,9 @@ final class OllamaProviderTests: XCTestCase {
 
     func testLiveOllamaGeneration() async throws {
         guard let model = ProcessInfo.processInfo.environment["OLLAMA_MODEL"], !model.isEmpty else {
-            throw XCTSkip("Set OLLAMA_MODEL (e.g. llama3.2) and ensure Ollama is running to run the live Ollama test.")
+            throw XCTSkip(
+                "Set OLLAMA_MODEL (e.g. llama3.2) and ensure Ollama is running to run the live Ollama test."
+            )
         }
         let liveProvider = OpenAICompatibleProvider(
             baseURL: "http://localhost:11434/v1",

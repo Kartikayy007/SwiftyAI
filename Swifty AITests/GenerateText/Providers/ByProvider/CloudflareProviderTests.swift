@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Swifty_AI
 
 final class CloudflareProviderTests: XCTestCase {
@@ -17,11 +18,15 @@ final class CloudflareProviderTests: XCTestCase {
 
     func testSuccessfulGeneration() async throws {
         MockURLProtocol.handler = { _ in
-            try mockResponse(statusCode: 200, json: [
-                "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-                "choices": [["message": ["content": "Hello from Cloudflare"], "finish_reason": "stop"]],
-                "usage": ["prompt_tokens": 6, "completion_tokens": 14]
-            ])
+            try mockResponse(
+                statusCode: 200,
+                json: [
+                    "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+                    "choices": [
+                        ["message": ["content": "Hello from Cloudflare"], "finish_reason": "stop"]
+                    ],
+                    "usage": ["prompt_tokens": 6, "completion_tokens": 14],
+                ])
         }
         let response = try await provider.generate("Hi")
         XCTAssertEqual(response.text, "Hello from Cloudflare")
@@ -35,21 +40,26 @@ final class CloudflareProviderTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await provider.generate("Hi")
-        XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer test-key")
+        XCTAssertEqual(
+            capturedRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer test-key")
     }
 
     func testSendsCorrectEndpoint() async throws {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await provider.generate("Hi")
         XCTAssertEqual(
@@ -62,9 +72,11 @@ final class CloudflareProviderTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await provider.generate("Hi")
         XCTAssertTrue(capturedRequest?.url?.absoluteString.contains("test-account-id") == true)
@@ -96,10 +108,14 @@ final class CloudflareProviderTests: XCTestCase {
     }
 
     func testLiveCloudflareGeneration() async throws {
-        guard let apiKey = ProcessInfo.processInfo.environment["CLOUDFLARE_API_KEY"], !apiKey.isEmpty else {
+        guard let apiKey = ProcessInfo.processInfo.environment["CLOUDFLARE_API_KEY"],
+            !apiKey.isEmpty
+        else {
             throw XCTSkip("Set CLOUDFLARE_API_KEY to run the live Cloudflare integration test.")
         }
-        guard let accountID = ProcessInfo.processInfo.environment["CLOUDFLARE_ACCOUNT_ID"], !accountID.isEmpty else {
+        guard let accountID = ProcessInfo.processInfo.environment["CLOUDFLARE_ACCOUNT_ID"],
+            !accountID.isEmpty
+        else {
             throw XCTSkip("Set CLOUDFLARE_ACCOUNT_ID to run the live Cloudflare integration test.")
         }
         let liveProvider = OpenAICompatibleProvider(

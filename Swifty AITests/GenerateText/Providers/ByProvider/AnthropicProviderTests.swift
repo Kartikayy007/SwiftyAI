@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Swifty_AI
 
 final class AnthropicProviderTests: XCTestCase {
@@ -12,12 +13,14 @@ final class AnthropicProviderTests: XCTestCase {
 
     func testSuccessfulGeneration() async throws {
         MockURLProtocol.handler = { _ in
-            try mockResponse(statusCode: 200, json: [
-                "model": "claude-3-5-sonnet",
-                "content": [["type": "text", "text": "Hello from Anthropic"]],
-                "stop_reason": "end_turn",
-                "usage": ["input_tokens": 10, "output_tokens": 25]
-            ])
+            try mockResponse(
+                statusCode: 200,
+                json: [
+                    "model": "claude-3-5-sonnet",
+                    "content": [["type": "text", "text": "Hello from Anthropic"]],
+                    "stop_reason": "end_turn",
+                    "usage": ["input_tokens": 10, "output_tokens": 25],
+                ])
         }
         let response = try await provider.generate("Hi")
         XCTAssertEqual(response.text, "Hello from Anthropic")
@@ -29,13 +32,15 @@ final class AnthropicProviderTests: XCTestCase {
 
     func testNonTextBlocksAreIgnored() async throws {
         MockURLProtocol.handler = { _ in
-            try mockResponse(statusCode: 200, json: [
-                "content": [
-                    ["type": "tool_use", "id": "toolu_01"],
-                    ["type": "text", "text": "Here is the result"]
-                ],
-                "stop_reason": "tool_use"
-            ])
+            try mockResponse(
+                statusCode: 200,
+                json: [
+                    "content": [
+                        ["type": "tool_use", "id": "toolu_01"],
+                        ["type": "text", "text": "Here is the result"],
+                    ],
+                    "stop_reason": "tool_use",
+                ])
         }
         let response = try await provider.generate("Hi")
         XCTAssertEqual(response.text, "Here is the result")
@@ -43,9 +48,11 @@ final class AnthropicProviderTests: XCTestCase {
 
     func testAllNonTextBlocksThrowsInvalidResponse() async throws {
         MockURLProtocol.handler = { _ in
-            try mockResponse(statusCode: 200, json: [
-                "content": [["type": "tool_use", "id": "toolu_01"]]
-            ])
+            try mockResponse(
+                statusCode: 200,
+                json: [
+                    "content": [["type": "tool_use", "id": "toolu_01"]]
+                ])
         }
         do {
             _ = try await provider.generate("Hi")
@@ -59,25 +66,31 @@ final class AnthropicProviderTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "content": [["type": "text", "text": "ok"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "content": [["type": "text", "text": "ok"]]
+                ])
         }
         _ = try await provider.generate("Hi")
         XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "x-api-key"), "test-key")
-        XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "anthropic-version"), "2023-06-01")
+        XCTAssertEqual(
+            capturedRequest?.value(forHTTPHeaderField: "anthropic-version"), "2023-06-01")
     }
 
     func testSendsCorrectEndpoint() async throws {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "content": [["type": "text", "text": "ok"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "content": [["type": "text", "text": "ok"]]
+                ])
         }
         _ = try await provider.generate("Hi")
-        XCTAssertEqual(capturedRequest?.url?.absoluteString, "https://api.anthropic.com/v1/messages")
+        XCTAssertEqual(
+            capturedRequest?.url?.absoluteString, "https://api.anthropic.com/v1/messages")
     }
 
     func testAPIErrorThrowsCorrectly() async throws {
@@ -94,7 +107,8 @@ final class AnthropicProviderTests: XCTestCase {
     }
 
     func testLiveAnthropicGeneration() async throws {
-        guard let apiKey = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"], !apiKey.isEmpty else {
+        guard let apiKey = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"], !apiKey.isEmpty
+        else {
             throw XCTSkip("Set ANTHROPIC_API_KEY to run the live Anthropic integration test.")
         }
         let liveProvider = AnthropicProvider(apiKey: apiKey, model: "claude-3-5-sonnet-latest")

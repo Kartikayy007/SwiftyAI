@@ -97,6 +97,40 @@ do {
 
 ---
 
+## streamText
+
+Stream tokens as they are generated. Works with any provider conforming to ``AIStreamModel``.
+
+```swift
+for try await chunk in streamText(model: model, prompt: "Tell me a story.") {
+    print(chunk.text, terminator: "")  // print each delta as it arrives
+}
+```
+
+Each ``AIStreamChunk`` carries:
+- `text` — the delta for this chunk (one or a few tokens)
+- `finishReason` — non-nil only on the last chunk (`"stop"`, `"end_turn"`, `"STOP"`, etc.)
+- `usage` — non-nil only on the last chunk, where the provider supports it
+
+Accumulate the full response yourself if needed:
+
+```swift
+var fullText = ""
+for try await chunk in streamText(model: model, prompt: "Explain Swift.") {
+    fullText += chunk.text
+    if let reason = chunk.finishReason {
+        print("\nDone. Finish reason:", reason)
+    }
+    if let usage = chunk.usage {
+        print("Tokens — in:", usage.inputTokens, "out:", usage.outputTokens)
+    }
+}
+```
+
+Cancellation is supported — wrapping in a `Task` and calling `.cancel()` stops the stream cleanly.
+
+---
+
 ## generateText
 
 The top-level function. Works with any `AIModel`.
@@ -290,13 +324,16 @@ print(response.text)
 ### Core
 
 - ``AIModel``
+- ``AIStreamModel``
 - ``AIResponse``
+- ``AIStreamChunk``
 - ``TokenUsage``
 - ``AIError``
 
 ### Generation
 
 - ``generateText(model:prompt:)``
+- ``streamText(model:prompt:)``
 
 ### Providers
 

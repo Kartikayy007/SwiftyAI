@@ -4,7 +4,7 @@ import Foundation
 import FoundationModels
 
 @available(iOS 26, macOS 26, *)
-public struct AppleFoundationProvider: AIModel {
+public struct AppleFoundationProvider: AIModel, AIStreamModel {
     private let session: LanguageModelSession
 
     public init() {
@@ -22,6 +22,33 @@ public struct AppleFoundationProvider: AIModel {
             return AIResponse(text: response.content, model: "apple-on-device", usage: nil, finishReason: nil)
         } catch {
             throw AIError.networkError(error)
+        }
+    }
+
+    public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                var previousContent = ""
+                do {
+                    let responseStream = session.streamResponse(to: prompt)
+                    for try await partial in responseStream {
+                        if Task.isCancelled {
+                            continuation.finish()
+                            return
+                        }
+                        let current = partial.content
+                        let delta = String(current.dropFirst(previousContent.count))
+                        previousContent = current
+                        if !delta.isEmpty {
+                            continuation.yield(AIStreamChunk(text: delta, finishReason: nil, usage: nil))
+                        }
+                    }
+                    continuation.yield(AIStreamChunk(text: "", finishReason: "stop", usage: nil))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: AIError.networkError(error))
+                }
+            }
         }
     }
 }

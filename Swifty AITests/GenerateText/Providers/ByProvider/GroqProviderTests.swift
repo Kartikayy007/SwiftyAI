@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Swifty_AI
 
 final class GroqProviderTests: XCTestCase {
@@ -17,11 +18,15 @@ final class GroqProviderTests: XCTestCase {
 
     func testSuccessfulGeneration() async throws {
         MockURLProtocol.handler = { _ in
-            try mockResponse(statusCode: 200, json: [
-                "model": "llama-3.3-70b-versatile",
-                "choices": [["message": ["content": "Hello from Groq"], "finish_reason": "stop"]],
-                "usage": ["prompt_tokens": 8, "completion_tokens": 12]
-            ])
+            try mockResponse(
+                statusCode: 200,
+                json: [
+                    "model": "llama-3.3-70b-versatile",
+                    "choices": [
+                        ["message": ["content": "Hello from Groq"], "finish_reason": "stop"]
+                    ],
+                    "usage": ["prompt_tokens": 8, "completion_tokens": 12],
+                ])
         }
         let response = try await provider.generate("Hi")
         XCTAssertEqual(response.text, "Hello from Groq")
@@ -35,24 +40,30 @@ final class GroqProviderTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await provider.generate("Hi")
-        XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer test-key")
+        XCTAssertEqual(
+            capturedRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer test-key")
     }
 
     func testSendsCorrectEndpoint() async throws {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await provider.generate("Hi")
-        XCTAssertEqual(capturedRequest?.url?.absoluteString, "https://api.groq.com/openai/v1/chat/completions")
+        XCTAssertEqual(
+            capturedRequest?.url?.absoluteString, "https://api.groq.com/openai/v1/chat/completions")
     }
 
     func testAPIErrorThrowsCorrectly() async throws {
@@ -81,7 +92,8 @@ final class GroqProviderTests: XCTestCase {
     }
 
     func testLiveGroqGeneration() async throws {
-        guard let apiKey = ProcessInfo.processInfo.environment["GROQ_API_KEY"], !apiKey.isEmpty else {
+        guard let apiKey = ProcessInfo.processInfo.environment["GROQ_API_KEY"], !apiKey.isEmpty
+        else {
             throw XCTSkip("Set GROQ_API_KEY to run the live Groq integration test.")
         }
         let liveProvider = OpenAICompatibleProvider(

@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Swifty_AI
 
 final class OpenRouterProviderTests: XCTestCase {
@@ -17,11 +18,15 @@ final class OpenRouterProviderTests: XCTestCase {
 
     func testSuccessfulGeneration() async throws {
         MockURLProtocol.handler = { _ in
-            try mockResponse(statusCode: 200, json: [
-                "model": "meta-llama/llama-3.3-70b-instruct:free",
-                "choices": [["message": ["content": "Hello from OpenRouter"], "finish_reason": "stop"]],
-                "usage": ["prompt_tokens": 10, "completion_tokens": 15]
-            ])
+            try mockResponse(
+                statusCode: 200,
+                json: [
+                    "model": "meta-llama/llama-3.3-70b-instruct:free",
+                    "choices": [
+                        ["message": ["content": "Hello from OpenRouter"], "finish_reason": "stop"]
+                    ],
+                    "usage": ["prompt_tokens": 10, "completion_tokens": 15],
+                ])
         }
         let response = try await provider.generate("Hi")
         XCTAssertEqual(response.text, "Hello from OpenRouter")
@@ -35,24 +40,30 @@ final class OpenRouterProviderTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await provider.generate("Hi")
-        XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer test-key")
+        XCTAssertEqual(
+            capturedRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer test-key")
     }
 
     func testSendsCorrectEndpoint() async throws {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "choices": [["message": ["content": "ok"], "finish_reason": "stop"]]
+                ])
         }
         _ = try await provider.generate("Hi")
-        XCTAssertEqual(capturedRequest?.url?.absoluteString, "https://openrouter.ai/api/v1/chat/completions")
+        XCTAssertEqual(
+            capturedRequest?.url?.absoluteString, "https://openrouter.ai/api/v1/chat/completions")
     }
 
     func testAPIErrorThrowsCorrectly() async throws {
@@ -81,7 +92,9 @@ final class OpenRouterProviderTests: XCTestCase {
     }
 
     func testLiveOpenRouterGeneration() async throws {
-        guard let apiKey = ProcessInfo.processInfo.environment["OPENROUTER_API_KEY"], !apiKey.isEmpty else {
+        guard let apiKey = ProcessInfo.processInfo.environment["OPENROUTER_API_KEY"],
+            !apiKey.isEmpty
+        else {
             throw XCTSkip("Set OPENROUTER_API_KEY to run the live OpenRouter integration test.")
         }
         let liveProvider = OpenAICompatibleProvider(

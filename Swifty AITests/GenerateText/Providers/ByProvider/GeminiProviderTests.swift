@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Swifty_AI
 
 final class GeminiProviderTests: XCTestCase {
@@ -12,11 +13,18 @@ final class GeminiProviderTests: XCTestCase {
 
     func testSuccessfulGeneration() async throws {
         MockURLProtocol.handler = { _ in
-            try mockResponse(statusCode: 200, json: [
-                "modelVersion": "gemini-2.5-flash",
-                "candidates": [["content": ["parts": [["text": "Hello from Gemini"]]], "finishReason": "STOP"]],
-                "usageMetadata": ["promptTokenCount": 5, "candidatesTokenCount": 15]
-            ])
+            try mockResponse(
+                statusCode: 200,
+                json: [
+                    "modelVersion": "gemini-2.5-flash",
+                    "candidates": [
+                        [
+                            "content": ["parts": [["text": "Hello from Gemini"]]],
+                            "finishReason": "STOP",
+                        ]
+                    ],
+                    "usageMetadata": ["promptTokenCount": 5, "candidatesTokenCount": 15],
+                ])
         }
         let response = try await provider.generate("Hi")
         XCTAssertEqual(response.text, "Hello from Gemini")
@@ -30,9 +38,13 @@ final class GeminiProviderTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "candidates": [["content": ["parts": [["text": "ok"]]], "finishReason": "STOP"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "candidates": [
+                        ["content": ["parts": [["text": "ok"]]], "finishReason": "STOP"]
+                    ]
+                ])
         }
         _ = try await provider.generate("Hi")
         XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "x-goog-api-key"), "test-key")
@@ -42,9 +54,13 @@ final class GeminiProviderTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.handler = { request in
             capturedRequest = request
-            return try mockResponse(statusCode: 200, json: [
-                "candidates": [["content": ["parts": [["text": "ok"]]], "finishReason": "STOP"]]
-            ])
+            return try mockResponse(
+                statusCode: 200,
+                json: [
+                    "candidates": [
+                        ["content": ["parts": [["text": "ok"]]], "finishReason": "STOP"]
+                    ]
+                ])
         }
         _ = try await provider.generate("Hi")
         XCTAssertEqual(
@@ -79,7 +95,8 @@ final class GeminiProviderTests: XCTestCase {
     }
 
     func testLiveGeminiGeneration() async throws {
-        guard let apiKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !apiKey.isEmpty else {
+        guard let apiKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !apiKey.isEmpty
+        else {
             throw XCTSkip("Set GEMINI_API_KEY to run the live Gemini integration test.")
         }
         let liveProvider = GeminiProvider(apiKey: apiKey, model: "gemini-2.5-flash")
