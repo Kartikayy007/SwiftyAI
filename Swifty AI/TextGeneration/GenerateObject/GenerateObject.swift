@@ -1,6 +1,6 @@
 import Foundation
 
-public func generateObject<T: Decodable & JSONSchemaConvertible & Sendable>(
+public func generateObject<T: Decodable & JSONSchemaConvertible>(
     model: some AIModel,
     prompt: String,
     as type: T.Type = T.self
@@ -40,7 +40,7 @@ public func generateObject<T: Decodable & JSONSchemaConvertible & Sendable>(
     }
 }
 
-public func generateObject<T: Decodable & JSONSchemaConvertible & Sendable>(
+public func generateObject<T: Decodable & JSONSchemaConvertible>(
     model: String,
     prompt: String,
     as type: T.Type = T.self
