@@ -12,6 +12,7 @@ final class AllProvidersTests: XCTestCase {
         suite.addTest(MistralProviderTests.defaultTestSuite)
         suite.addTest(CohereProviderTests.defaultTestSuite)
         suite.addTest(CloudflareProviderTests.defaultTestSuite)
+        suite.addTest(OllamaProviderTests.defaultTestSuite)
         return suite
     }
 }

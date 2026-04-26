@@ -26,6 +26,10 @@ public extension AIModel where Self == OpenAICompatibleProvider {
     static func cloudflare(accountID: String, apiKey: String, model: String) -> OpenAICompatibleProvider {
         OpenAICompatibleProvider(baseURL: "https://api.cloudflare.com/client/v4/accounts/\(accountID)/ai/v1", apiKey: apiKey, model: model)
     }
+
+    static func ollama(model: String, baseURL: String = "http://localhost:11434/v1") -> OpenAICompatibleProvider {
+        OpenAICompatibleProvider(baseURL: baseURL, apiKey: "ollama", model: model)
+    }
 }
 
 public extension AIModel where Self == AnthropicProvider {
@@ -39,3 +43,14 @@ public extension AIModel where Self == GeminiProvider {
         GeminiProvider(apiKey: apiKey, model: model)
     }
 }
+
+#if canImport(FoundationModels)
+import FoundationModels
+
+@available(iOS 26, macOS 26, *)
+public extension AIModel where Self == AppleFoundationProvider {
+    static func appleFoundation() -> AppleFoundationProvider {
+        AppleFoundationProvider()
+    }
+}
+#endif
