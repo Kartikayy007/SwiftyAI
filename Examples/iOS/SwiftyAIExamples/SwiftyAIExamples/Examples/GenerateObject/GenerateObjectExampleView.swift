@@ -7,12 +7,19 @@ struct GenerateObjectExampleView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             ExampleCard(
-                title: "generateObject",
-                subtitle: "Uses JSONSchemaConvertible and decodes the model output into a Swift type."
+                title: "Structured Output",
+                subtitle: "Demonstrates Output.object, Output.array, Output.enum, and streamObject."
             ) {
+                Picker("Mode", selection: $viewModel.mode) {
+                    ForEach(GenerateObjectViewModel.Mode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 PromptEditor(title: "Prompt", text: $viewModel.prompt, minHeight: 150)
                 LoadingButton(
-                    title: "Extract",
+                    title: viewModel.mode == .stream ? "Stream" : "Extract",
                     systemImage: "curlybraces",
                     isLoading: viewModel.state.isLoading
                 ) {
@@ -27,7 +34,22 @@ struct GenerateObjectExampleView: View {
             }
 
             ExampleCard(title: "Decoded Object") {
-                if let recipe = viewModel.recipe {
+                if viewModel.mode == .array {
+                    if viewModel.ingredients.isEmpty {
+                        Text("Run the array example to decode ingredient ideas.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(viewModel.ingredients) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.name).font(.headline)
+                                Text(item.role).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } else if viewModel.mode == .enumeration {
+                    Text(viewModel.category?.rawValue ?? "Run the enum example to decode a category.")
+                        .font(.title3.weight(.semibold))
+                } else if let recipe = viewModel.recipe {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(recipe.title)
                             .font(.title3.weight(.semibold))
@@ -47,6 +69,18 @@ struct GenerateObjectExampleView: View {
                 } else {
                     Text("Run the example to decode a RecipeSummary.")
                         .foregroundStyle(.secondary)
+                }
+
+                if viewModel.mode == .stream {
+                    Divider()
+                    ResponsePanel(title: "Partial JSON", text: viewModel.partialJSON)
+                    if !viewModel.validationIssues.isEmpty {
+                        ForEach(viewModel.validationIssues, id: \.path) { issue in
+                            Text("\(issue.path): \(issue.message)")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                    }
                 }
                 UsageBadge(usage: viewModel.usage, finishReason: viewModel.finishReason)
             }

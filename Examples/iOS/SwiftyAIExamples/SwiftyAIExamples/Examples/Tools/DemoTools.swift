@@ -20,35 +20,50 @@ enum DemoTools {
         ISO8601DateFormatter().string(from: Date())
     }
 
-    static let calculateTip = AITool(
-        name: "calculate_tip",
-        description: "Calculates a restaurant tip and total.",
-        parameters: [
-            "type": "object",
-            "required": ["bill", "percent"],
-            "properties": [
-                "bill": ["type": "number", "description": "Bill amount before tip."],
-                "percent": ["type": "number", "description": "Tip percentage."]
-            ]
-        ]
-    ) { arguments in
-        let bill = try number("bill", in: arguments)
-        let percent = try number("percent", in: arguments)
-        let tip = bill * percent / 100
-        let total = bill + tip
-        return String(format: "tip %.2f, total %.2f", tip, total)
+    struct TipInput: Decodable {
+        let bill: Double
+        let percent: Double
     }
 
-    static let lookupDemoOrder = AITool(
+    struct TipOutput: Encodable {
+        let tip: Double
+        let total: Double
+    }
+
+    static let calculateTip = tool(
+        name: "calculate_tip",
+        description: "Calculates a restaurant tip and total.",
+        inputSchema: .object(
+            properties: [
+                "bill": .number(description: "Bill amount before tip.", minimum: 0),
+                "percent": .number(description: "Tip percentage.", minimum: 0)
+            ],
+            required: ["bill", "percent"]
+        ),
+        outputSchema: .object(
+            properties: [
+                "tip": .number(),
+                "total": .number()
+            ],
+            required: ["tip", "total"]
+        )
+    ) { (input: TipInput) in
+        let bill = input.bill
+        let percent = input.percent
+        let tip = bill * percent / 100
+        let total = bill + tip
+        return TipOutput(tip: tip, total: total)
+    }
+
+    static let lookupDemoOrder = dynamicTool(
         name: "lookup_demo_order",
         description: "Looks up a fake order status for demo IDs A100, B200, or C300.",
-        parameters: [
-            "type": "object",
-            "required": ["orderID"],
-            "properties": [
-                "orderID": ["type": "string", "description": "Demo order identifier."]
-            ]
-        ]
+        inputSchema: .object(
+            properties: [
+                "orderID": .string(description: "Demo order identifier.", minLength: 1)
+            ],
+            required: ["orderID"]
+        )
     ) { arguments in
         let orderID = arguments["orderID"] as? String ?? arguments["order_id"] as? String ?? ""
         switch orderID.uppercased() {
@@ -61,12 +76,5 @@ enum DemoTools {
         default:
             throw ExampleError.message("Unknown demo order \(orderID). Use A100, B200, or C300.")
         }
-    }
-
-    private static func number(_ key: String, in arguments: [String: Any]) throws -> Double {
-        if let value = arguments[key] as? Double { return value }
-        if let value = arguments[key] as? Int { return Double(value) }
-        if let value = arguments[key] as? String, let parsed = Double(value) { return parsed }
-        throw ExampleError.message("Missing numeric argument \(key).")
     }
 }

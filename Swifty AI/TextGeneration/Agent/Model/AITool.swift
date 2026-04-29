@@ -4,19 +4,66 @@ public struct AITool {
     public let name: String
     public let description: String
     public let parameters: [String: Any]
+    public let outputSchema: [String: Any]?
     public let execute: ([String: Any]) async throws -> String
 
     public init(
         name: String,
         description: String,
         parameters: [String: Any],
+        outputSchema: [String: Any]? = nil,
         execute: @escaping ([String: Any]) async throws -> String
     ) {
         self.name = name
         self.description = description
         self.parameters = parameters
+        self.outputSchema = outputSchema
         self.execute = execute
     }
+}
+
+public func tool<Input: Decodable, OutputValue: Encodable>(
+    name: String,
+    description: String,
+    inputSchema: AISchema,
+    outputSchema: AISchema? = nil,
+    execute: @escaping (Input) async throws -> OutputValue
+) -> AITool {
+    AITool(
+        name: name,
+        description: description,
+        parameters: inputSchema.jsonSchema,
+        outputSchema: outputSchema?.jsonSchema
+    ) { arguments in
+        let data = try JSONSerialization.data(withJSONObject: arguments)
+        let input = try JSONDecoder().decode(Input.self, from: data)
+        let output = try await execute(input)
+        return try encodeToolOutput(output)
+    }
+}
+
+public func dynamicTool(
+    name: String,
+    description: String,
+    inputSchema: AISchema,
+    outputSchema: AISchema? = nil,
+    execute: @escaping ([String: Any]) async throws -> String
+) -> AITool {
+    AITool(
+        name: name,
+        description: description,
+        parameters: inputSchema.jsonSchema,
+        outputSchema: outputSchema?.jsonSchema,
+        execute: execute
+    )
+}
+
+private func encodeToolOutput<OutputValue: Encodable>(_ output: OutputValue) throws -> String {
+    if let string = output as? String {
+        return string
+    }
+    let data = try JSONEncoder().encode(output)
+    return String(data: data, encoding: .utf8) ?? ""
 }
 
 public struct AIToolCall: Sendable, Identifiable {
@@ -43,6 +90,56 @@ public struct AIToolResult: Sendable {
         self.content = content
         self.isError = isError
     }
+}
+
+public enum ToolCallDecision: Sendable {
+    case execute
+    case reject(reason: String)
+    case returnResult(String)
+    case replaceArguments(String)
+}
+
+public enum ToolErrorPolicy: Sendable, Equatable {
+    case returnErrorResult
+    case failFast
+}
+
+public enum ToolTelemetryEvent: Sendable {
+    case requested(AIToolCall)
+    case approved(AIToolCall)
+    case rejected(AIToolCall, reason: String)
+    case started(AIToolCall)
+    case succeeded(AIToolCall, AIToolResult)
+    case failed(AIToolCall, message: String)
+    case skipped(AIToolCall, reason: String)
+    case completed(stepIndex: Int)
+}
+
+public struct ToolExecutionOptions {
+    public var approval: ((AIToolCall) async -> ToolCallDecision)?
+    public var onToolCall: ((AIToolCall) async -> ToolCallDecision)?
+    public var onToolResult: ((AIToolResult) -> Void)?
+    public var onTelemetry: ((ToolTelemetryEvent) -> Void)?
+    public var parallelToolCalls: Bool
+    public var errorPolicy: ToolErrorPolicy
+
+    public init(
+        approval: ((AIToolCall) async -> ToolCallDecision)? = nil,
+        onToolCall: ((AIToolCall) async -> ToolCallDecision)? = nil,
+        onToolResult: ((AIToolResult) -> Void)? = nil,
+        onTelemetry: ((ToolTelemetryEvent) -> Void)? = nil,
+        parallelToolCalls: Bool = false,
+        errorPolicy: ToolErrorPolicy = .returnErrorResult
+    ) {
+        self.approval = approval
+        self.onToolCall = onToolCall
+        self.onToolResult = onToolResult
+        self.onTelemetry = onTelemetry
+        self.parallelToolCalls = parallelToolCalls
+        self.errorPolicy = errorPolicy
+    }
+
+    public static let `default` = ToolExecutionOptions()
 }
 
 struct AIJSONValue: Encodable {

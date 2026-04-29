@@ -12,6 +12,10 @@ struct ToolsExampleView: View {
             ) {
                 PromptEditor(title: "Prompt", text: $viewModel.prompt)
 
+                Toggle("Human approval hooks", isOn: $viewModel.requiresApproval)
+                Toggle("Intercept order lookup", isOn: $viewModel.interceptOrderID)
+                Toggle("Parallel tool calls", isOn: $viewModel.parallelToolCalls)
+
                 HStack {
                     LoadingButton(
                         title: "Generate",

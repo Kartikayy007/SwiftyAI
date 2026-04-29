@@ -15,10 +15,11 @@ This app is a runnable gallery of SwiftyAI capabilities, similar in spirit to th
 
 - `generateText`: one-shot text generation with `AIResponse` metadata.
 - `streamText`: live `AIStreamChunk` rendering from `AsyncThrowingStream`.
-- `generateObject`: schema-guided decoding into `RecipeSummary`.
+- `generateObject`: schema-guided decoding with `Output.object`, `Output.array`, and `Output.enum`.
+- `streamObject`: partial JSON, best-effort partial objects, validation issues, and final decoded values.
 - `SwiftyChat`: stateful streaming chat.
-- `generateWithTools`: local Swift function calling with step timeline.
-- `streamWithTools`: live agent events for text, tool calls, and tool results.
+- `generateWithTools`: typed and dynamic Swift tools with step timeline.
+- `streamWithTools`: live agent events for text, tool calls, tool results, telemetry, interception, approval hooks, and parallel calls.
 - `GenerationOptions`: temperature, token limit, retry, stop sequences, and prompt caching.
 
 ## Notes

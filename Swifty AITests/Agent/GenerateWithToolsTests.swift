@@ -73,6 +73,143 @@ final class GenerateWithToolsTests: XCTestCase {
 
         XCTAssertEqual(result.steps.first?.toolCalls.first?.name, "search")
     }
+
+    func testTypedToolDecodesInputAndEncodesOutput() async throws {
+        struct Input: Decodable {
+            let bill: Double
+            let percent: Double
+        }
+        struct Output: Encodable {
+            let total: Double
+        }
+
+        let tipTool = tool(
+            name: "tip",
+            description: "Calculates tip",
+            inputSchema: .object(properties: ["bill": .number(), "percent": .number()]),
+            outputSchema: .object(properties: ["total": .number()])
+        ) { (input: Input) in
+            Output(total: input.bill + input.bill * input.percent / 100)
+        }
+
+        let result = try await tipTool.execute(["bill": 100.0, "percent": 20.0])
+
+        XCTAssertTrue(result.contains(#""total":120"#))
+        XCTAssertNotNil(tipTool.outputSchema)
+    }
+
+    func testDynamicToolReceivesRawArguments() async throws {
+        let search = dynamicTool(
+            name: "search",
+            description: "Searches",
+            inputSchema: .object(properties: ["query": .string()])
+        ) { args in
+            "query=\(args["query"] as? String ?? "")"
+        }
+
+        let result = try await search.execute(["query": "swift"])
+
+        XCTAssertEqual(result, "query=swift")
+    }
+
+    func testToolCallInterceptionCanReplaceArguments() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [.init(id: "call_1", name: "echo", arguments: #"{"value":"old"}"#)], finishReason: "tool_calls"),
+            .init(text: "done", toolCalls: [], finishReason: "stop")
+        ])
+        let echo = AITool(name: "echo", description: "", parameters: [:]) { args in
+            args["value"] as? String ?? ""
+        }
+
+        let result = try await generateWithTools(
+            model: model,
+            prompt: "echo",
+            tools: [echo],
+            toolOptions: .init(onToolCall: { _ in .replaceArguments(#"{"value":"new"}"#) })
+        )
+
+        XCTAssertEqual(result.steps.first?.toolResults.first?.content, "new")
+    }
+
+    func testApprovalCanRejectToolCall() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [.init(id: "call_1", name: "delete", arguments: "{}")], finishReason: "tool_calls"),
+            .init(text: "blocked", toolCalls: [], finishReason: "stop")
+        ])
+        let dangerous = AITool(name: "delete", description: "", parameters: [:]) { _ in
+            XCTFail("Rejected tool must not execute")
+            return ""
+        }
+
+        let result = try await generateWithTools(
+            model: model,
+            prompt: "delete",
+            tools: [dangerous],
+            toolOptions: .init(approval: { _ in .reject(reason: "Needs human approval") })
+        )
+
+        XCTAssertEqual(result.steps.first?.toolResults.first?.content, "Needs human approval")
+        XCTAssertEqual(result.steps.first?.toolResults.first?.isError, true)
+    }
+
+    func testTelemetryReceivesToolLifecycleEvents() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [.init(id: "call_1", name: "noop", arguments: "{}")], finishReason: "tool_calls"),
+            .init(text: "done", toolCalls: [], finishReason: "stop")
+        ])
+        let noop = AITool(name: "noop", description: "", parameters: [:]) { _ in "ok" }
+        var eventCount = 0
+
+        _ = try await generateWithTools(
+            model: model,
+            prompt: "noop",
+            tools: [noop],
+            toolOptions: .init(onTelemetry: { _ in eventCount += 1 })
+        )
+
+        XCTAssertGreaterThanOrEqual(eventCount, 4)
+    }
+
+    func testParallelToolCallsRunConcurrentlyAndPreserveOrder() async throws {
+        actor ConcurrencyProbe {
+            var active = 0
+            var maxActive = 0
+
+            func started() {
+                active += 1
+                maxActive = max(maxActive, active)
+            }
+
+            func finished() {
+                active -= 1
+            }
+        }
+
+        let probe = ConcurrencyProbe()
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [
+                .init(id: "call_1", name: "slow", arguments: #"{"value":"first"}"#),
+                .init(id: "call_2", name: "slow", arguments: #"{"value":"second"}"#)
+            ], finishReason: "tool_calls"),
+            .init(text: "done", toolCalls: [], finishReason: "stop")
+        ])
+        let slow = AITool(name: "slow", description: "", parameters: [:]) { args in
+            await probe.started()
+            try await Task.sleep(nanoseconds: 50_000_000)
+            await probe.finished()
+            return args["value"] as? String ?? ""
+        }
+
+        let result = try await generateWithTools(
+            model: model,
+            prompt: "parallel",
+            tools: [slow],
+            toolOptions: .init(parallelToolCalls: true)
+        )
+
+        XCTAssertEqual(result.steps.first?.toolResults.map(\.content), ["first", "second"])
+        XCTAssertEqual(await probe.maxActive, 2)
+    }
 }
 
 private final class MockToolCallingModel: AIToolCallingModel {

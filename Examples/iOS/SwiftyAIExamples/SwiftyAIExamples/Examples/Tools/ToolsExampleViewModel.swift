@@ -18,6 +18,9 @@ final class ToolsExampleViewModel {
     var usage: TokenUsage?
     var finishReason: String?
     var isStreamingMode = false
+    var requiresApproval = false
+    var interceptOrderID = false
+    var parallelToolCalls = false
 
     private var streamTask: Task<Void, Never>?
 
@@ -33,12 +36,14 @@ final class ToolsExampleViewModel {
                 prompt: prompt,
                 tools: DemoTools.all,
                 options: GenerationOptions(system: "Use tools when useful. Then give a brief final answer."),
-                maxSteps: 5
-            ) { [weak self] step in
-                Task { @MainActor in
-                    self?.append(step: step)
-                }
-            }
+                maxSteps: 5,
+                onStepFinish: { [weak self] step in
+                    Task { @MainActor in
+                        self?.append(step: step)
+                    }
+                },
+                toolOptions: toolOptions()
+            )
             finalText = result.text
             usage = result.usage
             finishReason = result.finishReason
@@ -71,7 +76,8 @@ final class ToolsExampleViewModel {
                             self?.usage = result.usage
                             self?.finishReason = result.finishReason
                         }
-                    }
+                    },
+                    toolOptions: toolOptions()
                 )
 
                 for try await chunk in stream {
@@ -109,6 +115,34 @@ final class ToolsExampleViewModel {
         events = []
         usage = nil
         finishReason = nil
+    }
+
+    private func toolOptions() -> ToolExecutionOptions {
+        ToolExecutionOptions(
+            approval: requiresApproval ? { call in
+                call.name == "lookup_demo_order" ? .execute : .execute
+            } : nil,
+            onToolCall: { [weak self] call in
+                guard let self, self.interceptOrderID, call.name == "lookup_demo_order" else {
+                    return .execute
+                }
+                await MainActor.run {
+                    self.events.append(ToolEvent(title: "Intercepted", detail: "Replaced requested order with B200."))
+                }
+                return .replaceArguments(#"{"orderID":"B200"}"#)
+            },
+            onToolResult: { [weak self] result in
+                Task { @MainActor in
+                    self?.events.append(ToolEvent(title: "Tool result callback", detail: "\(result.name): \(result.content)"))
+                }
+            },
+            onTelemetry: { [weak self] event in
+                Task { @MainActor in
+                    self?.events.append(ToolEvent(title: "Telemetry", detail: String(describing: event)))
+                }
+            },
+            parallelToolCalls: parallelToolCalls
+        )
     }
 
     private func append(step: AIStep) {

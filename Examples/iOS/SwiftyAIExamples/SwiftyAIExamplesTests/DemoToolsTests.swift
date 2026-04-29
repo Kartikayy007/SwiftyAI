@@ -6,8 +6,9 @@ final class DemoToolsTests: XCTestCase {
         let tool = try XCTUnwrap(DemoTools.all.first { $0.name == "calculate_tip" })
         let result = try await tool.execute(["bill": 100.0, "percent": 20.0])
 
-        XCTAssertTrue(result.contains("tip 20.00"))
-        XCTAssertTrue(result.contains("total 120.00"))
+        XCTAssertTrue(result.contains(#""tip":20"#))
+        XCTAssertTrue(result.contains(#""total":120"#))
+        XCTAssertNotNil(tool.outputSchema)
     }
 
     func testLookupDemoOrderReturnsStatus() async throws {

@@ -11,6 +11,7 @@ public enum AIError: Error, Sendable {
     case unsupportedFeature(String)
     case toolNotFound(String)
     case maxStepsExceeded(Int)
+    case schemaValidationFailed([AISchemaValidationIssue])
 }
 
 extension AIError: LocalizedError {
@@ -36,6 +37,9 @@ extension AIError: LocalizedError {
             return "Tool '\(name)' was requested but is not registered"
         case .maxStepsExceeded(let maxSteps):
             return "Tool loop exceeded maxSteps (\(maxSteps))"
+        case .schemaValidationFailed(let issues):
+            let details = issues.map { "\($0.path): \($0.message)" }.joined(separator: "; ")
+            return "Schema validation failed: \(details)"
         }
     }
 }

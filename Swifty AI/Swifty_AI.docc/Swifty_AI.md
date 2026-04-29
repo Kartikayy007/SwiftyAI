@@ -444,6 +444,76 @@ Built-in stop conditions:
 
 `streamWithTools` exposes the same loop as an `AsyncThrowingStream<AIAgentChunk, Error>` and supports `onChunk`, `onStepFinish`, and `onFinish` callbacks.
 
+### Typed and dynamic tools
+
+Use `tool()` when your tool has typed Codable input and output:
+
+```swift
+struct TipInput: Decodable {
+    let bill: Double
+    let percent: Double
+}
+
+struct TipOutput: Encodable {
+    let tip: Double
+    let total: Double
+}
+
+let tip = tool(
+    name: "calculate_tip",
+    description: "Calculates a restaurant tip.",
+    inputSchema: .object(properties: [
+        "bill": .number(minimum: 0),
+        "percent": .number(minimum: 0)
+    ]),
+    outputSchema: .object(properties: [
+        "tip": .number(),
+        "total": .number()
+    ])
+) { (input: TipInput) in
+    let tip = input.bill * input.percent / 100
+    return TipOutput(tip: tip, total: input.bill + tip)
+}
+```
+
+Use `dynamicTool()` when the tool needs raw JSON-like arguments:
+
+```swift
+let lookup = dynamicTool(
+    name: "lookup_order",
+    description: "Looks up an order.",
+    inputSchema: .object(properties: ["orderID": .string()])
+) { args in
+    "Order \(args["orderID"] as? String ?? "") is out for delivery."
+}
+```
+
+### Approval, interception, telemetry, and parallel calls
+
+`ToolExecutionOptions` controls the tool loop without changing provider code:
+
+```swift
+let result = try await generateWithTools(
+    model: "openai/gpt-4o-mini",
+    prompt: "Check order A100 and calculate a tip.",
+    tools: [lookup, tip],
+    toolOptions: ToolExecutionOptions(
+        approval: { call in
+            call.name == "lookup_order" ? .execute : .reject(reason: "Needs approval")
+        },
+        onToolCall: { call in
+            call.name == "lookup_order"
+                ? .replaceArguments(#"{"orderID":"B200"}"#)
+                : .execute
+        },
+        onTelemetry: { event in print(event) },
+        parallelToolCalls: true
+    )
+)
+```
+
+By default, tool errors are returned to the model as `AIToolResult(isError: true)`. Set `errorPolicy: .failFast` to throw immediately.
+
 Tool calling uses native request fields for OpenAI-compatible providers, including OpenAI, Groq, OpenRouter, Mistral, Cohere, Cloudflare Workers AI, and Ollama. Anthropic, Gemini, and Apple Foundation Models use a provider-neutral JSON prompt fallback until their native tool formats are mapped.
 
 ---
@@ -496,6 +566,102 @@ public struct ObjectResponse<T: Decodable & Sendable>: Sendable {
 ```
 
 Note: Version 1 appends the schema to the prompt and decodes the model response. Markdown fences (` ```json ``` `) are stripped automatically. Extra keys returned by the LLM are ignored by `JSONDecoder`.
+
+### Output.object, Output.array, and Output.enum
+
+For new code, prefer `Output` with `AISchemaConvertible`:
+
+```swift
+struct Movie: Codable, AISchemaConvertible {
+    let title: String
+    let year: Int
+
+    static var aiSchema: AISchema {
+        .object(
+            properties: [
+                "title": .string(description: "Movie title", minLength: 1),
+                "year": .integer(minimum: 1888)
+            ],
+            required: ["title", "year"]
+        )
+    }
+}
+
+let movie = try await generateObject(
+    model: "openai/gpt-4o-mini",
+    prompt: "Suggest a sci-fi movie",
+    output: .object(Movie.self)
+).object
+```
+
+Arrays:
+
+```swift
+let movies = try await generateObject(
+    model: "openai/gpt-4o-mini",
+    prompt: "Suggest three sci-fi movies",
+    output: Output<[Movie]>.array(Movie.self)
+).object
+```
+
+Enums:
+
+```swift
+enum Priority: String, Codable, CaseIterable {
+    case low, medium, high
+}
+
+let priority = try await generateObject(
+    model: "openai/gpt-4o-mini",
+    prompt: "Classify this as low, medium, or high priority.",
+    output: Output<Priority>.enumeration(Priority.self)
+).object
+```
+
+### streamObject
+
+`streamObject` streams raw JSON text as it arrives and attempts best-effort partial decoding. Final output is strictly validated before finishing.
+
+```swift
+for try await chunk in streamObject(
+    model: "openai/gpt-4o-mini",
+    prompt: "Suggest a sci-fi movie",
+    output: Output<Movie>.object(Movie.self)
+) {
+    print(chunk.textDelta, terminator: "")
+    if let partial = chunk.partialObject {
+        print("Partial:", partial)
+    }
+    if let object = chunk.object {
+        print("Final:", object)
+    }
+}
+```
+
+If final JSON does not match the schema, SwiftyAI throws:
+
+```swift
+catch AIError.schemaValidationFailed(let issues) {
+    for issue in issues {
+        print(issue.path, issue.message)
+    }
+}
+```
+
+### @Guide constraints
+
+`@Guide` can keep field constraints near your model type. In this version it is metadata for your own schema declarations, not automatic schema synthesis:
+
+```swift
+struct Recipe: Codable, AISchemaConvertible {
+    @Guide("Short recipe title", minLength: 1)
+    var title: String
+
+    static var aiSchema: AISchema {
+        .object(properties: ["title": .string(description: "Short recipe title", minLength: 1)])
+    }
+}
+```
 
 ---
 
@@ -698,13 +864,23 @@ print(response.text)
 
 - ``generateText(model:prompt:options:)``
 - ``streamText(model:prompt:options:onChunk:onFinish:)``
-- ``generateWithTools(model:prompt:tools:options:maxSteps:stopWhen:onStepFinish:)``
-- ``streamWithTools(model:prompt:tools:options:maxSteps:stopWhen:onChunk:onStepFinish:onFinish:)``
+- ``generateWithTools(model:prompt:tools:options:maxSteps:stopWhen:onStepFinish:toolOptions:)``
+- ``streamWithTools(model:prompt:tools:options:maxSteps:stopWhen:onChunk:onStepFinish:onFinish:toolOptions:)``
 - ``generateObject(model:prompt:as:options:)``
+- ``streamObject(model:prompt:output:options:onPartial:onFinish:)``
 - ``GenerationOptions``
 - ``ObjectResponse``
+- ``ObjectStreamChunk``
+- ``Output``
+- ``AISchema``
+- ``AISchemaConvertible``
+- ``AISchemaValidationIssue``
+- ``Guide``
 - ``JSONSchemaConvertible``
 - ``AITool``
+- ``tool(name:description:inputSchema:outputSchema:execute:)``
+- ``dynamicTool(name:description:inputSchema:outputSchema:execute:)``
+- ``ToolExecutionOptions``
 - ``AIStepResult``
 - ``AIStopCondition``
 
