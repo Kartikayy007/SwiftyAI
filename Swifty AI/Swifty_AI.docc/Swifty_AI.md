@@ -634,6 +634,83 @@ OpenAI-compatible custom providers can call the same concrete provider type dire
 
 ---
 
+## Reranking
+
+Use reranking to score a small set of candidate documents against a query and return the most relevant matches. Reranking is independent from embeddings and vector stores: you provide the candidate documents, and the reranker returns ordered indexes and relevance scores.
+
+### Cohere rerank
+
+Configure Cohere once, then resolve a rerank model by string:
+
+```swift
+AI.configure {
+    $0.cohere(apiKey: ProcessInfo.processInfo.environment["COHERE_API_KEY"]!)
+}
+
+let response = try await rerank(
+    model: "cohere/rerank-v3.5",
+    query: "What is the vacation policy?",
+    documents: [
+        "Employees receive fifteen paid vacation days each year.",
+        "The office is closed on public holidays.",
+        "Expense reports are due by Friday."
+    ],
+    options: RerankOptions(topN: 2)
+)
+
+for result in response.results {
+    print(result.index, result.relevanceScore)
+}
+```
+
+You can also pass a Cohere rerank provider directly:
+
+```swift
+let model = AIRerankModel.cohere(apiKey: "...", model: "rerank-v3.5")
+
+let response = try await rerank(
+    model: model,
+    query: "capital of the United States",
+    documents: [
+        RerankDocument("Carson City is the capital of Nevada."),
+        RerankDocument("Washington, D.C. is the capital of the United States.")
+    ],
+    options: RerankOptions(topN: 1, returnDocuments: true)
+)
+
+let best = response.results.first
+print(best?.index ?? -1)
+print(best?.document?.text ?? "")
+```
+
+`RerankOptions.returnDocuments` asks providers that support it to include returned document text. Cohere supports this through its v1 rerank endpoint. `RerankDocument.metadata` is encoded as Cohere document object fields when present.
+
+### Custom rerankers
+
+Conform to ``AIRerankModel`` for mocks, local rerankers, or proprietary backends:
+
+```swift
+struct LocalReranker: AIRerankModel {
+    func rerank(
+        query: String,
+        documents: [RerankDocument],
+        options: RerankOptions
+    ) async throws -> RerankResponse {
+        let scored = documents.enumerated().map { index, document in
+            RerankResult(
+                index: index,
+                relevanceScore: document.text.localizedCaseInsensitiveContains(query) ? 1 : 0,
+                document: options.returnDocuments == true ? document : nil
+            )
+        }
+
+        return RerankResponse(results: Array(scored.prefix(options.topN ?? scored.count)))
+    }
+}
+```
+
+---
+
 ## GenerationOptions
 
 All generation functions accept optional `GenerationOptions` to control model behavior. Every field is optional; unset fields are omitted from the request.
@@ -1158,10 +1235,16 @@ print(response.text)
 - ``generateObject(model:prompt:as:options:)``
 - ``streamObject(model:prompt:output:options:onPartial:onFinish:)``
 - ``generateImage(model:prompt:options:)``
+- ``rerank(model:query:documents:options:)``
 - ``transcribe(model:audio:options:)``
 - ``generateSpeech(model:text:options:)``
 - ``generateVideo(model:prompt:options:)``
 - ``GenerationOptions``
+- ``RerankOptions``
+- ``RerankDocument``
+- ``RerankResult``
+- ``RerankResponse``
+- ``AIRerankModel``
 - ``ImageGenerationOptions``
 - ``ImageResponse``
 - ``GeneratedImage``
@@ -1204,6 +1287,7 @@ print(response.text)
 - ``OpenRouterProvider``
 - ``MistralProvider``
 - ``CohereProvider``
+- ``CohereRerankProvider``
 - ``CloudflareProvider``
 - ``OllamaProvider``
 - ``AppleFoundationProvider``
