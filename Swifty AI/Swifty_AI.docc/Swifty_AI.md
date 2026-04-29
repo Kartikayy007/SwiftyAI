@@ -213,6 +213,60 @@ Cancellation is supported. Wrap the stream in a `Task` and call `.cancel()` to s
 
 ---
 
+## SwiftUI Hooks
+
+Use ``AIChat`` and ``AICompletion`` when you want SwiftUI-friendly SDK state without adopting a prebuilt UI. Both types are `@Observable`, `@MainActor`, and expose synchronous `send()`, `stop()`, and `reset()` methods.
+
+### AIChat
+
+``AIChat`` manages chat messages, input, loading state, errors, and cancellation. It appends the user message immediately, clears `input`, and streams the assistant reply into `messages`.
+
+```swift
+@State private var chat = AIChat(
+    model: "openai/gpt-4o-mini",
+    systemPrompt: "Be concise."
+)
+
+chat.input = "Explain Swift actors."
+chat.send()
+
+chat.messages   // [ChatMessage]
+chat.isLoading  // true while the reply is streaming
+chat.error      // Error? set when streaming fails
+
+chat.stop()     // cancels the in-flight reply
+chat.reset()    // clears messages, input, loading state, and errors
+```
+
+You can also pass a streaming model directly:
+
+```swift
+let chat = AIChat(
+    model: AIStreamModel.openAI(apiKey: "sk-...", model: "gpt-4o-mini"),
+    systemPrompt: "Reply in one paragraph.",
+    maxMessages: 20
+)
+```
+
+### AICompletion
+
+``AICompletion`` manages single-prompt text generation state. Use `input`/`output`, or the equivalent aliases `prompt`/`completion`.
+
+```swift
+@State private var completion = AICompletion(model: "openai/gpt-4o-mini")
+
+completion.prompt = "Write a release note."
+completion.send()
+
+completion.output     // generated text
+completion.completion // same value as output
+completion.isLoading
+completion.error
+
+completion.stop()
+completion.reset()
+```
+
 ## SwiftyChat
 
 `SwiftyChat` is an `@Observable` class that manages a full multi-turn chat session. It handles message history, streaming, and state so your SwiftUI view can stay simple.
@@ -1318,6 +1372,8 @@ print(response.text)
 
 ### Chat
 
+- ``AIChat``
+- ``AICompletion``
 - ``SwiftyChat``
 - ``ChatMessage``
 - ``ChatRole``
