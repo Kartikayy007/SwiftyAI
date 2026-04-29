@@ -1,10 +1,19 @@
 import Foundation
 
-func sseLines(request: URLRequest, session: URLSession = .shared) -> AsyncThrowingStream<String, Error> {
+func sseLines(
+    request: URLRequest,
+    session: URLSession = .shared,
+    options: GenerationOptions = GenerationOptions()
+) -> AsyncThrowingStream<String, Error> {
     AsyncThrowingStream { continuation in
         Task {
             do {
-                let (data, response) = try await session.data(for: request)
+                var request = request
+                for (key, value) in options.headers {
+                    request.setValue(value, forHTTPHeaderField: key)
+                }
+
+                let (bytes, response) = try await session.bytes(for: request)
 
                 guard let http = response as? HTTPURLResponse else {
                     continuation.finish(throwing: AIError.invalidResponse)
@@ -12,19 +21,11 @@ func sseLines(request: URLRequest, session: URLSession = .shared) -> AsyncThrowi
                 }
 
                 guard (200..<300).contains(http.statusCode) else {
-                    let message = apiSSEErrorMessage(from: data) ?? "HTTP \(http.statusCode)"
-                    continuation.finish(throwing: AIError.apiError(statusCode: http.statusCode, message: message))
+                    continuation.finish(throwing: AIError.apiError(statusCode: http.statusCode, message: "HTTP \(http.statusCode)"))
                     return
                 }
 
-                guard let body = String(data: data, encoding: .utf8) else {
-                    continuation.finish(throwing: AIError.invalidResponse)
-                    return
-                }
-
-                let lines = body.components(separatedBy: "\n")
-
-                for line in lines {
+                for try await line in bytes.lines {
                     if Task.isCancelled {
                         continuation.finish()
                         return
@@ -46,20 +47,11 @@ func sseLines(request: URLRequest, session: URLSession = .shared) -> AsyncThrowi
                 continuation.finish()
             } catch let error as AIError {
                 continuation.finish(throwing: error)
+            } catch is CancellationError {
+                continuation.finish()
             } catch {
                 continuation.finish(throwing: AIError.networkError(error))
             }
         }
     }
-}
-
-private func apiSSEErrorMessage(from data: Data) -> String? {
-    guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-        return String(data: data, encoding: .utf8)
-    }
-    if let error = json["error"] as? [String: Any], let msg = error["message"] as? String {
-        return msg
-    }
-    if let message = json["message"] as? String { return message }
-    return String(data: data, encoding: .utf8)
 }

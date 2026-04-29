@@ -1,6 +1,6 @@
 import Foundation
 
-public struct AnthropicProvider: AIModel, AIStreamModel {
+public struct AnthropicProvider: AIModel, AIStreamModel, AIToolCallingModel {
     private let apiKey: String
     private let model: String
     let session: URLSession
@@ -33,7 +33,7 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
             stopSequences: options.stopSequences
         )
 
-        let data = try await httpPost(url: url, headers: headers, body: body, session: session)
+        let data = try await httpPost(url: url, headers: headers, body: body, session: session, options: options)
 
         do {
             let decoded = try JSONDecoder().decode(Response.self, from: data)
@@ -103,7 +103,7 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
                 var outputTokens: Int?
 
                 do {
-                    for try await jsonString in sseLines(request: request, session: session) {
+                    for try await jsonString in sseLines(request: request, session: session, options: options) {
                         if Task.isCancelled {
                             continuation.finish()
                             return

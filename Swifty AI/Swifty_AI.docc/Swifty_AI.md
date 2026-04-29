@@ -376,7 +376,10 @@ let options = GenerationOptions(
     seed: 42,          // OpenAI + Gemini
     presencePenalty: 0.1,   // OpenAI-compatible only
     frequencyPenalty: 0.1,  // OpenAI-compatible only
-    stopSequences: ["END"]
+    stopSequences: ["END"],
+    headers: ["X-Request-ID": "abc123"],
+    retryPolicy: RetryPolicy(maxAttempts: 3),
+    promptCaching: PromptCachingOptions(cacheKey: "user-123")
 )
 
 // generateText
@@ -399,6 +402,49 @@ let result = try await generateObject(
     options: GenerationOptions(temperature: 0.5)
 )
 ```
+
+---
+
+## generateWithTools
+
+Run a multi-step tool loop. The model can request one or more tools, SwiftyAI executes them, and the tool results are sent back to the model until the loop finishes or reaches `maxSteps`.
+
+```swift
+let weather = AITool(
+    name: "weather",
+    description: "Gets the current weather for a city.",
+    parameters: [
+        "type": "object",
+        "properties": ["city": ["type": "string"]],
+        "required": ["city"]
+    ]
+) { args in
+    "Sunny in \(args["city"] as? String ?? "unknown city")"
+}
+
+let result = try await generateWithTools(
+    model: "openai/gpt-4o-mini",
+    prompt: "What is the weather in Delhi?",
+    tools: [weather],
+    maxSteps: 5,
+    stopWhen: [isLoopFinished()],
+    onStepFinish: { step in
+        print("Finished step", step.index)
+    }
+)
+
+print(result.text)
+```
+
+Built-in stop conditions:
+
+- `isLoopFinished()` stops when the model returns final text with no tool calls.
+- `stepCountIs(_:)` stops on a specific step.
+- `hasToolCall(_:)` stops when any tool call, or a named tool call, appears.
+
+`streamWithTools` exposes the same loop as an `AsyncThrowingStream<AIAgentChunk, Error>` and supports `onChunk`, `onStepFinish`, and `onFinish` callbacks.
+
+Tool calling uses native request fields for OpenAI-compatible providers, including OpenAI, Groq, OpenRouter, Mistral, Cohere, Cloudflare Workers AI, and Ollama. Anthropic, Gemini, and Apple Foundation Models use a provider-neutral JSON prompt fallback until their native tool formats are mapped.
 
 ---
 
@@ -652,10 +698,15 @@ print(response.text)
 
 - ``generateText(model:prompt:options:)``
 - ``streamText(model:prompt:options:onChunk:onFinish:)``
+- ``generateWithTools(model:prompt:tools:options:maxSteps:stopWhen:onStepFinish:)``
+- ``streamWithTools(model:prompt:tools:options:maxSteps:stopWhen:onChunk:onStepFinish:onFinish:)``
 - ``generateObject(model:prompt:as:options:)``
 - ``GenerationOptions``
 - ``ObjectResponse``
 - ``JSONSchemaConvertible``
+- ``AITool``
+- ``AIStepResult``
+- ``AIStopCondition``
 
 ### Providers
 
