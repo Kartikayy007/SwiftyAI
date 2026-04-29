@@ -202,21 +202,28 @@ private extension GeminiProvider {
                     self.fileData = nil
                 }
 
+                private init(text: String? = nil, inlineData: InlineData? = nil, fileData: FileData? = nil) {
+                    self.text = text
+                    self.inlineData = inlineData
+                    self.fileData = fileData
+                }
+
                 init(content: AIMessageContent) throws {
                     switch content {
                     case .text(let text):
                         self.init(text: text)
                     case .imageURL(let url, _), .pdfURL(let url, _), .videoURL(let url), .fileURL(let url, _, _):
-                        self.text = nil
-                        self.inlineData = nil
-                        self.fileData = FileData(mimeType: content.mediaType?.rawValue ?? AIMediaType.octetStream.rawValue, fileURI: url.absoluteString)
+                        self.init(
+                            fileData: FileData(
+                                mimeType: content.mediaType?.rawValue ?? AIMediaType.octetStream.rawValue,
+                                fileURI: url.absoluteString
+                            )
+                        )
                     case .imageBase64, .imageData, .pdfBase64, .pdfData, .audioBase64, .audioData, .videoBase64, .videoData, .fileBase64, .fileData:
                         guard let mediaType = content.mediaType, let data = content.rawBase64 else {
                             throw AIError.invalidResponse
                         }
-                        self.text = nil
-                        self.inlineData = InlineData(mimeType: mediaType.rawValue, data: data)
-                        self.fileData = nil
+                        self.init(inlineData: InlineData(mimeType: mediaType.rawValue, data: data))
                     }
                 }
 
