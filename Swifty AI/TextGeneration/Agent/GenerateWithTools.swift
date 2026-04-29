@@ -262,7 +262,7 @@ private func executeSingleToolCall(
     options.onTelemetry?(.requested(originalCall))
     var call = originalCall
 
-    if let decision = await options.onToolCall?(call) {
+    if let decision = options.onToolCall?(call) {
         switch decision {
         case .execute:
             break
@@ -278,7 +278,7 @@ private func executeSingleToolCall(
         }
     }
 
-    if let decision = await options.approval?(call) {
+    if let decision = options.approval?(call) {
         switch decision {
         case .execute:
             options.onTelemetry?(.approved(call))

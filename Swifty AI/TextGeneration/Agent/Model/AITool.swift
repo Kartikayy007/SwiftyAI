@@ -116,16 +116,16 @@ public enum ToolTelemetryEvent: Sendable {
 }
 
 public struct ToolExecutionOptions {
-    public var approval: ((AIToolCall) async -> ToolCallDecision)?
-    public var onToolCall: ((AIToolCall) async -> ToolCallDecision)?
+    public var approval: ((AIToolCall) -> ToolCallDecision)?
+    public var onToolCall: ((AIToolCall) -> ToolCallDecision)?
     public var onToolResult: ((AIToolResult) -> Void)?
     public var onTelemetry: ((ToolTelemetryEvent) -> Void)?
     public var parallelToolCalls: Bool
     public var errorPolicy: ToolErrorPolicy
 
     public init(
-        approval: ((AIToolCall) async -> ToolCallDecision)? = nil,
-        onToolCall: ((AIToolCall) async -> ToolCallDecision)? = nil,
+        approval: ((AIToolCall) -> ToolCallDecision)? = nil,
+        onToolCall: ((AIToolCall) -> ToolCallDecision)? = nil,
         onToolResult: ((AIToolResult) -> Void)? = nil,
         onTelemetry: ((ToolTelemetryEvent) -> Void)? = nil,
         parallelToolCalls: Bool = false,

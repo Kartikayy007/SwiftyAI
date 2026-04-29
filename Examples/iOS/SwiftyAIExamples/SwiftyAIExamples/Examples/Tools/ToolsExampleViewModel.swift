@@ -118,16 +118,17 @@ final class ToolsExampleViewModel {
     }
 
     private func toolOptions() -> ToolExecutionOptions {
+        let shouldInterceptOrderID = interceptOrderID
+        let shouldRequireApproval = requiresApproval
+        let shouldRunParallel = parallelToolCalls
+
         ToolExecutionOptions(
-            approval: requiresApproval ? { call in
+            approval: shouldRequireApproval ? { call in
                 call.name == "lookup_demo_order" ? .execute : .execute
             } : nil,
-            onToolCall: { [weak self] call in
-                guard let self, self.interceptOrderID, call.name == "lookup_demo_order" else {
+            onToolCall: { call in
+                guard shouldInterceptOrderID, call.name == "lookup_demo_order" else {
                     return .execute
-                }
-                await MainActor.run {
-                    self.events.append(ToolEvent(title: "Intercepted", detail: "Replaced requested order with B200."))
                 }
                 return .replaceArguments(#"{"orderID":"B200"}"#)
             },
@@ -141,7 +142,7 @@ final class ToolsExampleViewModel {
                     self?.events.append(ToolEvent(title: "Telemetry", detail: String(describing: event)))
                 }
             },
-            parallelToolCalls: parallelToolCalls
+            parallelToolCalls: shouldRunParallel
         )
     }
 
