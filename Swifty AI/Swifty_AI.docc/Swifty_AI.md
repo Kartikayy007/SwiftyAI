@@ -364,6 +364,113 @@ print("Tokens used:", response.usage?.outputTokens ?? 0)
 
 ---
 
+## Embeddings
+
+Use embeddings to turn text into vectors for search, clustering, classification, and similarity scoring. SwiftyAI supports OpenAI-compatible embedding endpoints and Gemini's embedding API through the same feature-level API.
+
+### embed
+
+Generate one embedding vector:
+
+```swift
+let response = try await embed(
+    model: "openai/text-embedding-3-small",
+    input: "Swift actors protect mutable state.",
+    options: EmbeddingOptions(dimensions: 512)
+)
+
+let vector = response.embedding ?? []
+print("Vector dimensions:", vector.count)
+print("Input tokens:", response.usage?.inputTokens ?? 0)
+```
+
+You can also pass a provider directly:
+
+```swift
+let model = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: "sk-...",
+    model: "text-embedding-3-small"
+)
+
+let response = try await embed(model: model, input: "Search query")
+```
+
+Gemini embedding models use the same call. Gemini-specific task hints can be passed in `EmbeddingOptions`:
+
+```swift
+let response = try await embed(
+    model: "gemini/gemini-embedding-001",
+    input: "How do Swift actors work?",
+    options: EmbeddingOptions(
+        dimensions: 768,
+        taskType: .retrievalQuery
+    )
+)
+```
+
+### embedMany
+
+Batch multiple strings in one provider request:
+
+```swift
+let docs = [
+    "Swift actors isolate mutable state.",
+    "Structured concurrency scopes child tasks.",
+    "Optionals represent values that may be absent."
+]
+
+let response = try await embedMany(
+    model: "openai/text-embedding-3-small",
+    inputs: docs,
+    options: EmbeddingOptions(dimensions: 512)
+)
+
+let vectors = response.embeddings
+```
+
+For Gemini retrieval documents, include the task type and an optional title:
+
+```swift
+let response = try await embedMany(
+    model: "gemini/gemini-embedding-001",
+    inputs: docs,
+    options: EmbeddingOptions(
+        taskType: .retrievalDocument,
+        title: "Swift notes"
+    )
+)
+```
+
+### cosineSimilarity
+
+Use `cosineSimilarity(_:_:)` to compare two vectors. It returns `0` for empty vectors, mismatched dimensions, or zero-magnitude vectors.
+
+```swift
+let query = try await embed(
+    model: "openai/text-embedding-3-small",
+    input: "How does Swift protect shared state?"
+)
+let documents = try await embedMany(
+    model: "openai/text-embedding-3-small",
+    inputs: docs
+)
+
+let queryVector = query.embedding ?? []
+let scores = documents.embeddings.map { cosineSimilarity(queryVector, $0) }
+```
+
+### Embedding provider support
+
+| API | OpenAI-compatible | Gemini | Anthropic and others |
+|---|---|---|---|
+| `embed` | `/embeddings` | `models.embedContent` | Not supported |
+| `embedMany` | `/embeddings` with array input | `models.batchEmbedContents` | Not supported |
+| `dimensions` | `dimensions` | `outputDimensionality` | Not supported |
+| `taskType` and `title` | Ignored | Sent to Gemini | Not supported |
+
+---
+
 ## Multimodal Messages
 
 Use ``AIMessageContent`` when a prompt includes text plus images, PDFs, audio, video, or file attachments.
@@ -1197,10 +1304,13 @@ print(response.text)
 ### Core
 
 - ``AIModel``
+- ``AIEmbeddingModel``
 - ``AIStreamModel``
 - ``AIResponse``
 - ``AIStreamChunk``
 - ``TokenUsage``
+- ``EmbeddingResponse``
+- ``EmbeddingUsage``
 - ``AIError``
 - ``AIMessageContent``
 - ``AIMediaType``
@@ -1234,12 +1344,17 @@ print(response.text)
 - ``streamWithTools(model:prompt:tools:options:maxSteps:stopWhen:onChunk:onStepFinish:onFinish:toolOptions:)``
 - ``generateObject(model:prompt:as:options:)``
 - ``streamObject(model:prompt:output:options:onPartial:onFinish:)``
+- ``embed(model:input:options:)``
+- ``embedMany(model:inputs:options:)``
+- ``cosineSimilarity(_:_:)``
 - ``generateImage(model:prompt:options:)``
 - ``rerank(model:query:documents:options:)``
 - ``transcribe(model:audio:options:)``
 - ``generateSpeech(model:text:options:)``
 - ``generateVideo(model:prompt:options:)``
 - ``GenerationOptions``
+- ``EmbeddingOptions``
+- ``EmbeddingTaskType``
 - ``RerankOptions``
 - ``RerankDocument``
 - ``RerankResult``
