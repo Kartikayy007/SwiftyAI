@@ -34,7 +34,7 @@ let response = try await generateText(
 Set API keys once at startup, then use model strings (`"provider/model"`) everywhere. You do not need to pass keys at each call site.
 
 ```swift
-// In AppDelegate, @main body, or app init
+// In AppDelegate, @main, or your app initializer
 AI.configure {
     $0.openAI(apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!)
     $0.anthropic(apiKey: "sk-ant-...")
@@ -78,7 +78,7 @@ let movie: Movie = try await generateObject(model: "gemini/gemini-2.5-flash", pr
 let chat = SwiftyChat(model: "groq/llama-3.3-70b-versatile", systemPrompt: "Be helpful.")
 ```
 
-### Error handling for registry
+### Registry error handling
 
 ```swift
 do {
@@ -104,7 +104,7 @@ public protocol AIModel: Sendable {
 }
 ```
 
-You can also conform your own type to `AIModel` for mocking or custom backends:
+You can also make your own type conform to `AIModel` for mocks or custom backends:
 
 ```swift
 struct MyMockModel: AIModel {
@@ -116,7 +116,7 @@ struct MyMockModel: AIModel {
 
 ### AIResponse
 
-Returned by every `generateText` call.
+Returned by every `generateText` call:
 
 ```swift
 public struct AIResponse: Sendable {
@@ -127,7 +127,7 @@ public struct AIResponse: Sendable {
 }
 ```
 
-Example — reading all fields:
+Example of reading all fields:
 
 ```swift
 let response = try await generateText(model: model, prompt: "Hello")
@@ -193,7 +193,7 @@ Each ``AIStreamChunk`` includes:
 - `finishReason` — non-nil only on the last chunk (`"stop"`, `"end_turn"`, `"STOP"`, etc.)
 - `usage` — non-nil only on the last chunk, where the provider supports it
 
-Accumulate the full response yourself if needed:
+Accumulate the full response yourself when needed:
 
 ```swift
 var fullText = ""
@@ -225,7 +225,7 @@ With the registry (configure once at startup):
 )
 ```
 
-Or with a direct provider:
+With a direct provider:
 
 ```swift
 @State private var chat = SwiftyChat(
@@ -349,7 +349,7 @@ public struct ChatMessage: Sendable, Identifiable {
 
 ## generateText
 
-Works with any `AIModel` — direct provider or registry string.
+Works with any `AIModel`, including a direct provider or a registry string.
 
 ```swift
 let response = try await generateText(
@@ -364,7 +364,7 @@ print("Tokens used:", response.usage?.outputTokens ?? 0)
 
 ## GenerationOptions
 
-All generation functions accept an optional `GenerationOptions` to control model behaviour. Every field is optional — unset fields are omitted from the request.
+All generation functions accept optional `GenerationOptions` to control model behavior. Every field is optional; unset fields are omitted from the request.
 
 ```swift
 let options = GenerationOptions(
@@ -382,7 +382,7 @@ let options = GenerationOptions(
 // generateText
 let response = try await generateText(model: "openai/gpt-4o-mini", prompt: "Hi", options: options)
 
-// streamText — with optional callbacks
+// streamText with optional callbacks
 for try await chunk in streamText(
     model: "anthropic/claude-sonnet-4-6",
     prompt: "Tell me a story.",
@@ -457,7 +457,7 @@ Note: Version 1 appends the schema to the prompt and decodes the model response.
 
 ### OpenAI
 
-Free tier: no. Models: `gpt-4o`, `gpt-4o-mini`, `o1-mini`, etc.
+Free tier: no. Models include `gpt-4o`, `gpt-4o-mini`, `o1-mini`, and others.
 
 ```swift
 let model = AIModel.openAI(
@@ -471,7 +471,7 @@ print(response.text)
 
 ### Anthropic
 
-Free tier: no. Models: `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`, etc.
+Free tier: no. Models include `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`, and others.
 
 ```swift
 let model = AIModel.anthropic(
@@ -485,7 +485,7 @@ print(response.text)
 
 ### Google Gemini
 
-Free tier: yes. Models: `gemini-2.5-flash`, `gemini-2.5-pro`, etc.
+Free tier: yes. Models include `gemini-2.5-flash`, `gemini-2.5-pro`, and others.
 
 ```swift
 let model = AIModel.gemini(
@@ -499,7 +499,7 @@ print(response.text)
 
 ### Groq
 
-Free tier: yes. Models: `llama-3.3-70b-versatile`, `mixtral-8x7b-32768`, etc.
+Free tier: yes. Models include `llama-3.3-70b-versatile`, `mixtral-8x7b-32768`, and others.
 
 ```swift
 let model = AIModel.groq(
@@ -527,7 +527,7 @@ print(response.text)
 
 ### Mistral
 
-Free tier: yes (`mistral-small-latest` has a free tier). Models: `mistral-large-latest`, `mistral-small-latest`, etc.
+Free tier: yes (`mistral-small-latest` has a free tier). Models include `mistral-large-latest`, `mistral-small-latest`, and others.
 
 ```swift
 let model = AIModel.mistral(
@@ -541,7 +541,7 @@ print(response.text)
 
 ### Cohere
 
-Free tier: yes. Models: `command-a-03-2025`, `command-r-plus`, etc.
+Free tier: yes. Models include `command-a-03-2025`, `command-r-plus`, and others.
 
 ```swift
 let model = AIModel.cohere(
@@ -555,7 +555,7 @@ print(response.text)
 
 ### Cloudflare Workers AI
 
-Free tier: yes. Requires your account ID from the Cloudflare Workers dashboard. Models: `@cf/meta/llama-3.3-70b-instruct-fp8-fast`, etc.
+Free tier: yes. Requires your account ID from the Cloudflare Workers dashboard. Models include `@cf/meta/llama-3.3-70b-instruct-fp8-fast` and others.
 
 ```swift
 let model = AIModel.cloudflare(
@@ -570,7 +570,7 @@ print(response.text)
 
 ### Ollama (local)
 
-Free. Runs models on your Mac — no API key, no cloud. Requires [Ollama](https://ollama.com) installed and a model pulled (`ollama pull llama3.2`).
+Free. Runs models on your Mac with no API key and no cloud dependency. Requires [Ollama](https://ollama.com) and a pulled model, such as `ollama pull llama3.2`.
 
 ```swift
 let model = AIModel.ollama(model: "llama3.2")
@@ -585,11 +585,11 @@ Non-default host or port:
 let model = AIModel.ollama(model: "llama3.2", baseURL: "http://localhost:8080/v1")
 ```
 
-Popular models: `llama3.2`, `mistral`, `gemma3`, `phi4`, `qwen2.5-coder`. Run `ollama list` to see what's pulled.
+Popular models include `llama3.2`, `mistral`, `gemma3`, `phi4`, and `qwen2.5-coder`. Run `ollama list` to see what is installed.
 
 ### Apple Foundation Models (on-device)
 
-Free. Uses Apple's on-device model via the `FoundationModels` framework. Requires iOS 26+ / macOS 26+, Apple Silicon, and Apple Intelligence enabled in Settings.
+Free. Uses Apple's on-device model through the `FoundationModels` framework. Requires iOS 26+ or macOS 26+, Apple Silicon, and Apple Intelligence enabled in Settings.
 
 ```swift
 import FoundationModels  // iOS 26+, macOS 26+
@@ -607,11 +607,11 @@ if #available(iOS 26, macOS 26, *) {
 }
 ```
 
-Token limit: 4096 combined input + output. No usage metadata returned (Apple doesn't expose token counts).
+Token limit: 4096 combined input and output tokens. No usage metadata is returned because Apple does not expose token counts.
 
 ### Custom OpenAI-compatible backend
 
-Any backend that speaks the OpenAI `/chat/completions` format — Together AI, LM Studio, vLLM, etc.
+Any backend that supports the OpenAI `/chat/completions` format, such as Together AI, LM Studio, or vLLM.
 
 ```swift
 let model = OpenAICompatibleProvider(
