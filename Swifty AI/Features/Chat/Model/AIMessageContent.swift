@@ -9,6 +9,10 @@ public enum AIMediaType: String, Sendable, Codable {
     case wav = "audio/wav"
     case mp3 = "audio/mpeg"
     case mp4Audio = "audio/mp4"
+    case opus = "audio/opus"
+    case aac = "audio/aac"
+    case flac = "audio/flac"
+    case pcm = "audio/pcm"
     case mp4Video = "video/mp4"
     case mov = "video/quicktime"
     case plainText = "text/plain"
@@ -19,6 +23,10 @@ public enum AIMediaType: String, Sendable, Codable {
         case .wav: return "wav"
         case .mp3: return "mp3"
         case .mp4Audio: return "mp4"
+        case .opus: return "opus"
+        case .aac: return "aac"
+        case .flac: return "flac"
+        case .pcm: return "pcm"
         default: return rawValue
         }
     }
@@ -32,6 +40,10 @@ public enum AIMediaType: String, Sendable, Codable {
         case "pdf": return .pdf
         case "wav": return .wav
         case "mp3": return .mp3
+        case "opus": return .opus
+        case "aac": return .aac
+        case "flac": return .flac
+        case "pcm": return .pcm
         case "mp4": return .mp4Video
         case "mov": return .mov
         case "txt", "text": return .plainText

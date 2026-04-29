@@ -421,6 +421,145 @@ Provider model capability still matters. A provider may reject a media type if t
 
 ---
 
+## Media Generation
+
+SwiftyAI also includes provider-neutral media APIs for image generation, speech-to-text, text-to-speech, and video generation.
+
+### generateImage
+
+```swift
+let response = try await generateImage(
+    model: "openai/gpt-image-1",
+    prompt: "A friendly robot holding a red skateboard",
+    options: ImageGenerationOptions(
+        count: 1,
+        size: .square1024,
+        quality: .high,
+        format: .png
+    )
+)
+
+let imageData = response.images[0].data
+```
+
+Gemini Imagen uses the same API with Imagen-specific options:
+
+```swift
+let response = try await generateImage(
+    model: "gemini/imagen-4.0-generate-001",
+    prompt: "A product photo of a matte black desk lamp",
+    options: ImageGenerationOptions(
+        count: 1,
+        size: "1K",
+        aspectRatio: "16:9",
+        personGeneration: "dont_allow"
+    )
+)
+```
+
+### Image model middleware
+
+Use `wrapImageModel` to add reusable behavior around image generation, such as prompt rewriting, logging, defaults, or policy checks.
+
+```swift
+let model = AIModel.openAI(apiKey: "sk-...", model: "gpt-image-1")
+let wrapped = wrapImageModel(
+    model,
+    middleware: [
+        ImageModelMiddleware { request, next in
+            var request = request
+            request.prompt += ", high quality studio lighting"
+            return try await next(request)
+        }
+    ]
+)
+
+let response = try await generateImage(model: wrapped, prompt: "A ceramic coffee cup")
+```
+
+### transcribe
+
+```swift
+let audio = AIAudioInput(data: wavData, filename: "meeting.wav", mediaType: .wav)
+
+let transcript = try await transcribe(
+    model: "openai/gpt-4o-transcribe",
+    audio: audio,
+    options: TranscriptionOptions(language: "en")
+)
+
+print(transcript.text)
+```
+
+Gemini transcription uses Gemini's audio understanding path and returns text from `generateContent`:
+
+```swift
+let transcript = try await transcribe(
+    model: "gemini/gemini-2.5-flash",
+    audio: audio,
+    options: TranscriptionOptions(prompt: "Transcribe this audio verbatim.")
+)
+```
+
+### generateSpeech
+
+```swift
+let speech = try await generateSpeech(
+    model: "openai/gpt-4o-mini-tts",
+    text: "Welcome to SwiftyAI.",
+    options: SpeechOptions(voice: "alloy", format: .mp3)
+)
+
+let mp3Data = speech.data
+```
+
+Gemini TTS returns PCM-style audio from the Gemini `generateContent` audio modality:
+
+```swift
+let speech = try await generateSpeech(
+    model: "gemini/gemini-3.1-flash-tts-preview",
+    text: "Say cheerfully: Have a wonderful day!",
+    options: SpeechOptions(voice: "Kore", format: .pcm)
+)
+```
+
+### generateVideo
+
+Video generation is asynchronous at the provider level. `generateVideo` starts the job, polls until completion, and downloads the final MP4 data.
+
+```swift
+let video = try await generateVideo(
+    model: "openai/sora-2",
+    prompt: "A clean logo animation on a white background",
+    options: VideoGenerationOptions(size: "1280x720", seconds: 8)
+)
+
+let mp4Data = video.data
+```
+
+Gemini Veo uses the same API:
+
+```swift
+let video = try await generateVideo(
+    model: "gemini/veo-3.1-generate-preview",
+    prompt: "A cinematic shot of a majestic lion in the savannah.",
+    options: VideoGenerationOptions(aspectRatio: "16:9", negativePrompt: "cartoon")
+)
+```
+
+### Media provider support
+
+| API | OpenAI | Gemini | Anthropic and others |
+|---|---|---|---|
+| `generateImage` | Image API | Imagen `predict` | Not supported |
+| `transcribe` | Audio transcription endpoint | Audio understanding fallback | Not supported |
+| `generateSpeech` | Audio speech endpoint | Gemini TTS via `generateContent` | Not supported |
+| `generateVideo` | Sora Video API | Veo long-running operation | Not supported |
+
+OpenAI-compatible custom providers can call the same concrete provider type directly, but the remote service must actually implement the media endpoint.
+
+---
+
 ## GenerationOptions
 
 All generation functions accept optional `GenerationOptions` to control model behavior. Every field is optional; unset fields are omitted from the request.
@@ -930,7 +1069,29 @@ print(response.text)
 - ``streamWithTools(model:prompt:tools:options:maxSteps:stopWhen:onChunk:onStepFinish:onFinish:toolOptions:)``
 - ``generateObject(model:prompt:as:options:)``
 - ``streamObject(model:prompt:output:options:onPartial:onFinish:)``
+- ``generateImage(model:prompt:options:)``
+- ``transcribe(model:audio:options:)``
+- ``generateSpeech(model:text:options:)``
+- ``generateVideo(model:prompt:options:)``
 - ``GenerationOptions``
+- ``ImageGenerationOptions``
+- ``ImageResponse``
+- ``GeneratedImage``
+- ``ImageSize``
+- ``ImageQuality``
+- ``ImageOutputFormat``
+- ``SpeechOptions``
+- ``SpeechResponse``
+- ``TranscriptionOptions``
+- ``TranscriptionResponse``
+- ``AIAudioInput``
+- ``AudioFormat``
+- ``VideoGenerationOptions``
+- ``VideoResponse``
+- ``AIImageModel``
+- ``ImageGenerationRequest``
+- ``ImageModelMiddleware``
+- ``wrapImageModel(_:middleware:)``
 - ``ObjectResponse``
 - ``ObjectStreamChunk``
 - ``Output``

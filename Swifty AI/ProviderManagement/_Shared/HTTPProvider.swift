@@ -46,6 +46,81 @@ func httpPost(
     throw lastError ?? AIError.invalidResponse
 }
 
+func httpPostData(
+    url: URL,
+    headers: [String: String],
+    body: Data,
+    contentType: String,
+    session: URLSession = .shared,
+    options: GenerationOptions = GenerationOptions()
+) async throws -> Data {
+    let maxAttempts = max(1, options.retryPolicy.maxAttempts)
+    var lastError: Error?
+
+    for attempt in 1...maxAttempts {
+        if Task.isCancelled {
+            throw CancellationError()
+        }
+
+        do {
+            return try await sendHTTPPost(
+                url: url,
+                headers: headers,
+                body: body,
+                contentType: contentType,
+                session: session,
+                options: options
+            )
+        } catch let error as AIError {
+            if shouldRetry(error, policy: options.retryPolicy), attempt < maxAttempts {
+                lastError = error
+            } else {
+                throw error
+            }
+        } catch {
+            throw error
+        }
+
+        try await Task.sleep(for: options.retryPolicy.baseDelay)
+    }
+
+    throw lastError ?? AIError.invalidResponse
+}
+
+func httpGetData(
+    url: URL,
+    headers: [String: String],
+    session: URLSession = .shared,
+    options: GenerationOptions = GenerationOptions()
+) async throws -> Data {
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    for (key, value) in headers {
+        request.setValue(value, forHTTPHeaderField: key)
+    }
+    for (key, value) in options.headers {
+        request.setValue(value, forHTTPHeaderField: key)
+    }
+
+    let (data, response): (Data, URLResponse)
+    do {
+        (data, response) = try await session.data(for: request)
+    } catch {
+        throw AIError.networkError(error)
+    }
+
+    guard let http = response as? HTTPURLResponse else {
+        throw AIError.invalidResponse
+    }
+
+    guard (200..<300).contains(http.statusCode) else {
+        let message = apiErrorMessage(from: data) ?? "HTTP \(http.statusCode)"
+        throw AIError.apiError(statusCode: http.statusCode, message: message)
+    }
+
+    return data
+}
+
 private func sendHTTPPost(
     url: URL,
     headers: [String: String],
@@ -53,9 +128,27 @@ private func sendHTTPPost(
     session: URLSession,
     options: GenerationOptions
 ) async throws -> Data {
+    try await sendHTTPPost(
+        url: url,
+        headers: headers,
+        body: body,
+        contentType: "application/json",
+        session: session,
+        options: options
+    )
+}
+
+private func sendHTTPPost(
+    url: URL,
+    headers: [String: String],
+    body: Data,
+    contentType: String,
+    session: URLSession,
+    options: GenerationOptions
+) async throws -> Data {
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue(contentType, forHTTPHeaderField: "Content-Type")
     for (key, value) in headers {
         request.setValue(value, forHTTPHeaderField: key)
     }

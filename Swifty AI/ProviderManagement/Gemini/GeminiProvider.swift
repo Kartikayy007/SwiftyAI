@@ -1,8 +1,8 @@
 import Foundation
 
-public struct GeminiProvider: AIModel, AIStreamModel, AIToolCallingModel {
-    private let apiKey: String
-    private let model: String
+public struct GeminiProvider: AIModel, AIStreamModel, AIToolCallingModel, AIImageModel, AITranscriptionModel, AISpeechModel, AIVideoModel {
+    let apiKey: String
+    let model: String
     let session: URLSession
 
     public init(apiKey: String, model: String, session: URLSession = .shared) {
