@@ -21,12 +21,12 @@ public struct Output<T: Decodable> {
         Output<[Element]>(schema: .array(of: itemSchema))
     }
 
-    public static func enumeration<E>(_ type: E.Type) -> Output<E> where T == E, E: RawRepresentable & CaseIterable & Decodable, E.RawValue == String {
-        Output<E>(
-            schema: .enumeration(E.allCases.map(\.rawValue)),
+    public static func enumeration(_ type: T.Type = T.self) -> Output<T> where T: RawRepresentable & CaseIterable & Decodable, T.RawValue == String {
+        Output<T>(
+            schema: .enumeration(T.allCases.map(\.rawValue)),
             decode: { data in
                 let raw = try JSONDecoder().decode(String.self, from: data)
-                guard let value = E(rawValue: raw) else {
+                guard let value = T(rawValue: raw) else {
                     throw AIError.schemaValidationFailed([.init(path: "$", message: "Unknown enum value \(raw)")])
                 }
                 return value
