@@ -1,10 +1,10 @@
 # ``Swifty_AI``
 
-Provider-agnostic AI SDK for Apple platforms. Zero mandatory dependencies.
+A provider-agnostic AI SDK for Apple platforms, with zero mandatory dependencies.
 
 ## Overview
 
-Configure once, use everywhere — no API key at every call site.
+Configure once and use it everywhere, with no API key needed at every call site.
 
 ```swift
 // AppDelegate / @main — once
@@ -18,7 +18,7 @@ let response = try await generateText(model: "openai/gpt-4o-mini", prompt: "Expl
 print(response.text)
 ```
 
-Or pass a provider directly — both styles work:
+You can also pass a provider directly. Both styles work:
 
 ```swift
 let response = try await generateText(
@@ -31,7 +31,7 @@ let response = try await generateText(
 
 ## AI.configure (Registry)
 
-Set API keys once at startup. Then use model strings (`"provider/model"`) everywhere — no key at call sites.
+Set API keys once at startup, then use model strings (`"provider/model"`) everywhere. You do not need to pass keys at each call site.
 
 ```swift
 // In AppDelegate, @main body, or app init
@@ -96,7 +96,7 @@ do {
 
 ### AIModel
 
-The protocol every provider conforms to. You rarely use this directly — use the factory methods instead.
+The protocol that every provider conforms to. You rarely need to use this directly; use the factory methods instead.
 
 ```swift
 public protocol AIModel: Sendable {
@@ -153,7 +153,7 @@ public struct TokenUsage: Sendable {
 
 ### AIError
 
-All requests throw `AIError`. Catch it specifically for structured error handling:
+Request failures throw `AIError`. Catch it specifically for structured error handling:
 
 ```swift
 do {
@@ -180,7 +180,7 @@ do {
 
 ## streamText
 
-Stream tokens as they are generated. Works with any provider conforming to ``AIStreamModel``.
+Stream tokens as they are generated. This works with any provider that conforms to ``AIStreamModel``.
 
 ```swift
 for try await chunk in streamText(model: model, prompt: "Tell me a story.") {
@@ -188,7 +188,7 @@ for try await chunk in streamText(model: model, prompt: "Tell me a story.") {
 }
 ```
 
-Each ``AIStreamChunk`` carries:
+Each ``AIStreamChunk`` includes:
 - `text` — the delta for this chunk (one or a few tokens)
 - `finishReason` — non-nil only on the last chunk (`"stop"`, `"end_turn"`, `"STOP"`, etc.)
 - `usage` — non-nil only on the last chunk, where the provider supports it
@@ -208,13 +208,13 @@ for try await chunk in streamText(model: model, prompt: "Explain Swift.") {
 }
 ```
 
-Cancellation is supported — wrapping in a `Task` and calling `.cancel()` stops the stream cleanly.
+Cancellation is supported. Wrap the stream in a `Task` and call `.cancel()` to stop it cleanly.
 
 ---
 
 ## SwiftyChat
 
-`SwiftyChat` is an `@Observable` class that manages a full multi-turn chat session. It handles message history, streaming, and state — so your SwiftUI view stays simple.
+`SwiftyChat` is an `@Observable` class that manages a full multi-turn chat session. It handles message history, streaming, and state so your SwiftUI view can stay simple.
 
 With the registry (configure once at startup):
 
@@ -240,7 +240,7 @@ Or with a direct provider:
 try await chat.send("What is Swift?")
 ```
 
-Every `send()` call:
+Every `send()` call does the following:
 1. Appends the user message to `chat.messages`
 2. Streams the assistant reply token-by-token into a new assistant message
 3. Sets `isStreaming = false` when done
@@ -297,7 +297,7 @@ struct ChatView: View {
 
 ### Multi-turn conversation
 
-History is managed automatically. Every `send()` passes the full `messages` array to the provider — the model sees the entire conversation.
+History is managed automatically. Every `send()` call passes the full `messages` array to the provider, so the model sees the entire conversation.
 
 ```swift
 try await chat.send("My name is Kartikay")
@@ -306,7 +306,7 @@ try await chat.send("What's my name?")  // model answers: "Kartikay"
 
 ### System prompt
 
-Set once at init, injected as the first message on every request:
+Set the system prompt once during initialization. It is injected as the first message on every request:
 
 ```swift
 let chat = SwiftyChat(
@@ -323,7 +323,7 @@ Use `maxMessages` to cap how many messages are sent per request:
 let chat = SwiftyChat(model: .openAI(apiKey: "...", model: "gpt-4o"), maxMessages: 20)
 ```
 
-Oldest messages are trimmed first. System prompt (if set) is always included regardless of the limit.
+The oldest messages are trimmed first. The system prompt, if set, is always included regardless of the limit.
 
 ### Stop and clear
 
@@ -404,9 +404,9 @@ let result = try await generateObject(
 
 ## generateObject
 
-Returns a decoded Swift struct. No manual JSON parsing.
+Returns a decoded Swift struct. No manual JSON parsing is required.
 
-Define your type conforming to `JSONSchemaConvertible`:
+Define a type that conforms to `JSONSchemaConvertible`:
 
 ```swift
 struct Movie: Codable, JSONSchemaConvertible, Sendable {
@@ -449,7 +449,7 @@ public struct ObjectResponse<T: Decodable & Sendable>: Sendable {
 }
 ```
 
-Note: V1 uses prompt injection — the schema is appended to the prompt and the response is decoded. Markdown fences (` ```json ``` `) are stripped automatically. Extra keys returned by the LLM are silently ignored by `JSONDecoder`.
+Note: Version 1 appends the schema to the prompt and decodes the model response. Markdown fences (` ```json ``` `) are stripped automatically. Extra keys returned by the LLM are ignored by `JSONDecoder`.
 
 ---
 
