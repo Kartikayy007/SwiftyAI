@@ -1,6 +1,7 @@
 public protocol AIStreamModel: AIModel {
     func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error>
     func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error>
+    func stream(_ prompt: [AIMessageContent], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error>
     func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error>
     func stream(messages: [ChatMessage], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error>
 }
@@ -8,6 +9,10 @@ public protocol AIStreamModel: AIModel {
 public extension AIStreamModel {
     func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
         stream(prompt)
+    }
+
+    func stream(_ prompt: [AIMessageContent], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        stream(prompt.textContent, options: options)
     }
 
     func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {

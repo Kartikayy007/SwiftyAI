@@ -18,6 +18,10 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel, AIToolCallingMod
     }
 
     public func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse {
+        try await generate([.text(prompt)], options: options)
+    }
+
+    public func generate(_ prompt: [AIMessageContent], options: GenerationOptions) async throws -> AIResponse {
         guard let url = URL(string: "\(baseURL)/chat/completions") else {
             throw AIError.invalidResponse
         }
@@ -26,7 +30,7 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel, AIToolCallingMod
         if let system = options.system {
             messages.append(.init(role: "system", content: system))
         }
-        messages.append(.init(role: "user", content: prompt))
+        messages.append(.init(role: "user", parts: prompt))
 
         let body = Request(
             model: model,
@@ -71,7 +75,7 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel, AIToolCallingMod
     }
 
     public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        streamSSE(messages: messages.map { .init(role: $0.role.rawValue, content: $0.content) }, options: GenerationOptions())
+        streamSSE(messages: messages.map { .init(role: $0.role.rawValue, parts: $0.parts) }, options: GenerationOptions())
     }
 
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
@@ -79,11 +83,15 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel, AIToolCallingMod
     }
 
     public func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        stream([.text(prompt)], options: options)
+    }
+
+    public func stream(_ prompt: [AIMessageContent], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
         var messages: [Request.Message] = []
         if let system = options.system {
             messages.append(.init(role: "system", content: system))
         }
-        messages.append(.init(role: "user", content: prompt))
+        messages.append(.init(role: "user", parts: prompt))
         return streamSSE(messages: messages, options: options)
     }
 
@@ -298,7 +306,7 @@ private extension OpenAICompatibleProvider {
 
         struct Message: Encodable {
             let role: String
-            let content: String?
+            let content: MessageContent?
             let toolCalls: [ToolCall]?
             let toolCallID: String?
             let name: String?
@@ -311,18 +319,163 @@ private extension OpenAICompatibleProvider {
 
             init(role: String, content: String? = nil, toolCalls: [ToolCall]? = nil, toolCallID: String? = nil, name: String? = nil) {
                 self.role = role
-                self.content = content
+                self.content = content.map(MessageContent.string)
                 self.toolCalls = toolCalls
                 self.toolCallID = toolCallID
                 self.name = name
             }
 
+            init(role: String, parts: [AIMessageContent]) {
+                self.role = role
+                self.content = .parts(parts.map(ContentPart.init(content:)))
+                self.toolCalls = nil
+                self.toolCallID = nil
+                self.name = nil
+            }
+
             init(agentMessage: AIAgentMessage) {
                 self.role = agentMessage.role
-                self.content = agentMessage.content
+                self.content = agentMessage.content.map(MessageContent.string)
                 self.toolCalls = agentMessage.toolCalls.isEmpty ? nil : agentMessage.toolCalls.map(ToolCall.init(toolCall:))
                 self.toolCallID = agentMessage.toolCallID
                 self.name = agentMessage.name
+            }
+        }
+
+        enum MessageContent: Encodable {
+            case string(String)
+            case parts([ContentPart])
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                switch self {
+                case .string(let string):
+                    try container.encode(string)
+                case .parts(let parts):
+                    try container.encode(parts)
+                }
+            }
+        }
+
+        struct ContentPart: Encodable {
+            let type: String
+            let text: String?
+            let imageURL: ImageURL?
+            let file: FilePart?
+            let inputAudio: InputAudio?
+            let videoURL: String?
+
+            enum CodingKeys: String, CodingKey {
+                case type, text, file
+                case imageURL = "image_url"
+                case inputAudio = "input_audio"
+                case videoURL = "video_url"
+            }
+
+            init(content: AIMessageContent) {
+                switch content {
+                case .text(let text):
+                    self.type = "text"
+                    self.text = text
+                    self.imageURL = nil
+                    self.file = nil
+                    self.inputAudio = nil
+                    self.videoURL = nil
+                case .imageURL(let url, let detail):
+                    self.type = "image_url"
+                    self.text = nil
+                    self.imageURL = ImageURL(url: url.absoluteString, detail: detail)
+                    self.file = nil
+                    self.inputAudio = nil
+                    self.videoURL = nil
+                case .imageBase64, .imageData:
+                    self.type = "image_url"
+                    self.text = nil
+                    self.imageURL = ImageURL(url: content.dataURL ?? "", detail: Self.imageDetail(content))
+                    self.file = nil
+                    self.inputAudio = nil
+                    self.videoURL = nil
+                case .pdfURL(let url, let filename):
+                    self.type = "file"
+                    self.text = nil
+                    self.imageURL = nil
+                    self.file = FilePart(filename: filename ?? url.lastPathComponent, fileData: nil, fileURL: url.absoluteString)
+                    self.inputAudio = nil
+                    self.videoURL = nil
+                case .pdfBase64, .pdfData, .fileBase64, .fileData:
+                    self.type = "file"
+                    self.text = nil
+                    self.imageURL = nil
+                    self.file = FilePart(filename: content.filename ?? "attachment", fileData: content.dataURL, fileURL: nil)
+                    self.inputAudio = nil
+                    self.videoURL = nil
+                case .audioBase64(let base64, let mediaType, _):
+                    self.type = "input_audio"
+                    self.text = nil
+                    self.imageURL = nil
+                    self.file = nil
+                    self.inputAudio = InputAudio(data: base64, format: mediaType.audioFormat)
+                    self.videoURL = nil
+                case .audioData(let data, let mediaType, _):
+                    self.type = "input_audio"
+                    self.text = nil
+                    self.imageURL = nil
+                    self.file = nil
+                    self.inputAudio = InputAudio(data: data.base64EncodedString(), format: mediaType.audioFormat)
+                    self.videoURL = nil
+                case .videoURL(let url):
+                    self.type = "video_url"
+                    self.text = nil
+                    self.imageURL = nil
+                    self.file = nil
+                    self.inputAudio = nil
+                    self.videoURL = url.absoluteString
+                case .videoBase64, .videoData:
+                    self.type = "video_url"
+                    self.text = nil
+                    self.imageURL = nil
+                    self.file = nil
+                    self.inputAudio = nil
+                    self.videoURL = content.dataURL
+                case .fileURL(let url, _, let filename):
+                    self.type = "file"
+                    self.text = nil
+                    self.imageURL = nil
+                    self.file = FilePart(filename: filename ?? url.lastPathComponent, fileData: nil, fileURL: url.absoluteString)
+                    self.inputAudio = nil
+                    self.videoURL = nil
+                }
+            }
+
+            private static func imageDetail(_ content: AIMessageContent) -> ImageDetail? {
+                switch content {
+                case .imageBase64(_, _, let detail), .imageData(_, _, let detail):
+                    return detail
+                default:
+                    return nil
+                }
+            }
+
+            struct ImageURL: Encodable {
+                let url: String
+                let detail: ImageDetail?
+            }
+
+            struct FilePart: Encodable {
+                let filename: String
+                let fileData: String?
+                let fileURL: String?
+
+                enum CodingKeys: String, CodingKey {
+                    case filename
+                    case fileData = "file_data"
+                    case fileURL = "file_url"
+                }
+            }
+
+            struct InputAudio: Encodable {
+                let data: String
+                let format: String
             }
         }
 

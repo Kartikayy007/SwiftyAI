@@ -37,6 +37,8 @@ struct AppRootView: View {
                     GenerateTextExampleView()
                 case .streamText:
                     StreamTextExampleView()
+                case .multimodal:
+                    MultimodalExampleView()
                 case .generateObject:
                     GenerateObjectExampleView()
                 case .chat:

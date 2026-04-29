@@ -101,6 +101,7 @@ The protocol that every provider conforms to. You rarely need to use this direct
 ```swift
 public protocol AIModel: Sendable {
     func generate(_ prompt: String) async throws -> AIResponse
+    func generate(_ prompt: [AIMessageContent], options: GenerationOptions) async throws -> AIResponse
 }
 ```
 
@@ -341,6 +342,7 @@ public struct ChatMessage: Sendable, Identifiable {
     public let id: String
     public let role: ChatRole       // .user, .assistant, .system
     public var content: String
+    public var parts: [AIMessageContent]
     public let createdAt: Date
 }
 ```
@@ -359,6 +361,63 @@ let response = try await generateText(
 print(response.text)
 print("Tokens used:", response.usage?.outputTokens ?? 0)
 ```
+
+---
+
+## Multimodal Messages
+
+Use ``AIMessageContent`` when a prompt includes text plus images, PDFs, audio, video, or file attachments.
+
+```swift
+let response = try await generateText(
+    model: "openai/gpt-4o",
+    prompt: [
+        .text("Describe the important details in this image."),
+        .imageURL(URL(string: "https://example.com/photo.jpg")!, detail: .high)
+    ]
+)
+```
+
+Local bytes use `Data`; base64 strings are accepted when you already have encoded content:
+
+```swift
+let response = try await generateText(
+    model: "gemini/gemini-2.5-flash",
+    prompt: [
+        .text("Summarize this PDF and extract action items."),
+        .pdfData(pdfData, filename: "brief.pdf"),
+        .imageBase64(imageBase64, mediaType: .png)
+    ]
+)
+```
+
+The same multipart prompt shape works with `streamText`, `generateObject`, and `streamObject`.
+
+```swift
+let summary = try await generateObject(
+    model: "openai/gpt-4o",
+    prompt: [
+        .text("Return a structured summary of this receipt."),
+        .imageData(receiptImageData, mediaType: .jpeg)
+    ],
+    output: Output<ReceiptSummary>.object(ReceiptSummary.self)
+).object
+```
+
+### Provider support
+
+| Input | OpenAI-compatible | Anthropic | Gemini |
+|---|---|---|---|
+| Text parts | Yes | Yes | Yes |
+| Image URL | Yes | Yes | Yes, as `file_data` URI |
+| Image base64/Data | Yes | Yes | Yes |
+| PDF URL | Yes | Yes | Yes, as `file_data` URI |
+| PDF base64/Data | Yes | Yes | Yes |
+| Audio base64/Data | Yes for compatible models | Not supported by the native Anthropic encoder | Yes |
+| Video URL/base64/Data | Encoded for compatible backends | Not supported by the native Anthropic encoder | Yes |
+| Generic file URL/base64/Data | Yes | Not supported by the native Anthropic encoder | Yes |
+
+Provider model capability still matters. A provider may reject a media type if the selected model does not support it.
 
 ---
 
@@ -853,6 +912,9 @@ print(response.text)
 - ``AIStreamChunk``
 - ``TokenUsage``
 - ``AIError``
+- ``AIMessageContent``
+- ``AIMediaType``
+- ``ImageDetail``
 
 ### Chat
 

@@ -4,6 +4,7 @@ import SwiftUI
 enum AppRoute: String, CaseIterable, Identifiable {
     case generateText
     case streamText
+    case multimodal
     case generateObject
     case chat
     case tools
@@ -15,6 +16,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
         switch self {
         case .generateText: "Generate Text"
         case .streamText: "Stream Text"
+        case .multimodal: "Multimodal"
         case .generateObject: "Generate Object"
         case .chat: "Chat"
         case .tools: "Tools"
@@ -26,6 +28,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
         switch self {
         case .generateText: "One-shot text generation"
         case .streamText: "Live token streaming"
+        case .multimodal: "Images, PDFs, audio, video, and files"
         case .generateObject: "Schema-shaped Swift values"
         case .chat: "Stateful streaming chat"
         case .tools: "Function calling and agent steps"
@@ -37,6 +40,7 @@ enum AppRoute: String, CaseIterable, Identifiable {
         switch self {
         case .generateText: "text.quote"
         case .streamText: "dot.radiowaves.left.and.right"
+        case .multimodal: "photo.on.rectangle.angled"
         case .generateObject: "curlybraces.square"
         case .chat: "bubble.left.and.bubble.right"
         case .tools: "wrench.and.screwdriver"
