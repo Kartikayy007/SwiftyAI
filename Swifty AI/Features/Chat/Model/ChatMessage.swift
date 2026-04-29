@@ -22,7 +22,7 @@ public struct ChatMessage: Sendable, Identifiable {
     public let createdAt: Date
     private var isSynchronizingContent = false
 
-    public init(id: String = UUID().uuidString, role: ChatRole, content: String, createdAt: Date = .now) {
+    public init(id: String = generateId(), role: ChatRole, content: String, createdAt: Date = .now) {
         self.id = id
         self.role = role
         self.content = content
@@ -30,7 +30,7 @@ public struct ChatMessage: Sendable, Identifiable {
         self.createdAt = createdAt
     }
 
-    public init(id: String = UUID().uuidString, role: ChatRole, parts: [AIMessageContent], createdAt: Date = .now) {
+    public init(id: String = generateId(), role: ChatRole, parts: [AIMessageContent], createdAt: Date = .now) {
         self.id = id
         self.role = role
         self.content = parts.textContent

@@ -421,6 +421,80 @@ Provider model capability still matters. A provider may reject a media type if t
 
 ---
 
+## Middleware
+
+Use middleware to wrap a model with reusable request and response behavior without changing provider code.
+
+```swift
+let base = AIModel.openAI(apiKey: "sk-...", model: "gpt-4o-mini")
+
+let model = wrapLanguageModel(
+    base,
+    middleware: [
+        defaultSettingsMiddleware(temperature: 0.2, maxTokens: 500),
+        extractReasoningMiddleware()
+    ]
+)
+
+let response = try await generateText(model: model, prompt: "Answer concisely.")
+```
+
+Middleware receives a ``LanguageModelRequest`` and a ``LanguageModelContinuation``. It can mutate the request before calling the next model, or transform the ``AIResponse`` after the provider returns.
+
+```swift
+let model = wrapLanguageModel(
+    base,
+    middleware: [
+        LanguageModelMiddleware { request, next in
+            var request = request
+            request.promptText += "\nReturn only the final answer."
+            let response = try await next(request)
+            return AIResponse(text: response.text.trimmingCharacters(in: .whitespacesAndNewlines),
+                              model: response.model,
+                              usage: response.usage,
+                              finishReason: response.finishReason)
+        }
+    ]
+)
+```
+
+Middleware composes in order: the first middleware sees the request first, the provider is called last, and responses unwind back through the chain.
+
+### Built-in middleware
+
+- ``defaultSettingsMiddleware(system:temperature:topP:topK:maxTokens:seed:presencePenalty:frequencyPenalty:stopSequences:headers:retryPolicy:promptCaching:)`` applies default generation options only when the request did not set them. Request headers win over default headers on key collision.
+- ``extractJsonMiddleware(onFailure:)`` extracts valid JSON from fenced code blocks or prose-wrapped JSON.
+- ``extractReasoningMiddleware(tags:)`` removes hidden reasoning-style XML blocks such as `<thinking>...</thinking>`.
+- ``simulateStreamingMiddleware(chunkSize:delay:)`` exposes a stream from a non-streaming model by generating once and chunking the final text.
+
+Streaming models can be wrapped directly:
+
+```swift
+let streaming = wrapStreamingLanguageModel(
+    AIStreamModel.openAI(apiKey: "sk-...", model: "gpt-4o-mini"),
+    streamMiddleware: [
+        defaultStreamingSettingsMiddleware(temperature: 0.2)
+    ]
+)
+```
+
+Non-streaming models can provide simulated streaming:
+
+```swift
+let streaming = wrapLanguageModel(
+    base,
+    streamMiddleware: [
+        simulateStreamingMiddleware(chunkSize: 32)
+    ]
+)
+
+for try await chunk in streamText(model: streaming, prompt: "Draft a short update.") {
+    print(chunk.text, terminator: "")
+}
+```
+
+---
+
 ## Media Generation
 
 SwiftyAI also includes provider-neutral media APIs for image generation, speech-to-text, text-to-speech, and video generation.
@@ -1065,6 +1139,20 @@ print(response.text)
 
 - ``generateText(model:prompt:options:)``
 - ``streamText(model:prompt:options:onChunk:onFinish:)``
+- ``wrapLanguageModel(_:middleware:)``
+- ``wrapLanguageModel(_:middleware:streamMiddleware:)``
+- ``wrapStreamingLanguageModel(_:middleware:streamMiddleware:)``
+- ``LanguageModelRequest``
+- ``LanguageModelStreamRequest``
+- ``LanguageModelMiddleware``
+- ``LanguageModelStreamMiddleware``
+- ``LanguageModelContinuation``
+- ``LanguageModelStreamContinuation``
+- ``defaultSettingsMiddleware(system:temperature:topP:topK:maxTokens:seed:presencePenalty:frequencyPenalty:stopSequences:headers:retryPolicy:promptCaching:)``
+- ``defaultStreamingSettingsMiddleware(system:temperature:topP:topK:maxTokens:seed:presencePenalty:frequencyPenalty:stopSequences:headers:retryPolicy:promptCaching:)``
+- ``extractJsonMiddleware(onFailure:)``
+- ``extractReasoningMiddleware(tags:)``
+- ``simulateStreamingMiddleware(chunkSize:delay:)``
 - ``generateWithTools(model:prompt:tools:options:maxSteps:stopWhen:onStepFinish:toolOptions:)``
 - ``streamWithTools(model:prompt:tools:options:maxSteps:stopWhen:onChunk:onStepFinish:onFinish:toolOptions:)``
 - ``generateObject(model:prompt:as:options:)``

@@ -1,4 +1,4 @@
-public struct GenerationOptions {
+public struct GenerationOptions: Sendable {
     public var system: String?
     public var temperature: Double?
     public var topP: Double?

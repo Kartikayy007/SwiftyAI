@@ -22,4 +22,11 @@ public struct AIResponse: Sendable {
     public let model: String?
     public let usage: TokenUsage?
     public let finishReason: String?
+
+    public init(text: String, model: String? = nil, usage: TokenUsage? = nil, finishReason: String? = nil) {
+        self.text = text
+        self.model = model
+        self.usage = usage
+        self.finishReason = finishReason
+    }
 }
