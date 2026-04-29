@@ -208,7 +208,8 @@ final class GenerateWithToolsTests: XCTestCase {
         )
 
         XCTAssertEqual(result.steps.first?.toolResults.map(\.content), ["first", "second"])
-        XCTAssertEqual(await probe.maxActive, 2)
+        let maxActive = await probe.maxActive
+        XCTAssertEqual(maxActive, 2)
     }
 }
 
