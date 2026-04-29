@@ -14,15 +14,32 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel {
     }
 
     public func generate(_ prompt: String) async throws -> AIResponse {
+        try await generate(prompt, options: GenerationOptions())
+    }
+
+    public func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse {
         guard let url = URL(string: "\(baseURL)/chat/completions") else {
             throw AIError.invalidResponse
         }
         let headers = ["Authorization": "Bearer \(apiKey)"]
+        var messages: [Request.Message] = []
+        if let system = options.system {
+            messages.append(.init(role: "system", content: system))
+        }
+        messages.append(.init(role: "user", content: prompt))
+
         let body = Request(
             model: model,
-            messages: [.init(role: "user", content: prompt)],
+            messages: messages,
             stream: false,
-            streamOptions: nil
+            streamOptions: nil,
+            temperature: options.temperature,
+            topP: options.topP,
+            maxTokens: options.maxTokens,
+            seed: options.seed,
+            presencePenalty: options.presencePenalty,
+            frequencyPenalty: options.frequencyPenalty,
+            stop: options.stopSequences
         )
 
         let data = try await httpPost(url: url, headers: headers, body: body, session: session)
@@ -49,14 +66,23 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel {
     }
 
     public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        streamSSE(messages: messages.map { .init(role: $0.role.rawValue, content: $0.content) })
+        streamSSE(messages: messages.map { .init(role: $0.role.rawValue, content: $0.content) }, options: GenerationOptions())
     }
 
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        streamSSE(messages: [.init(role: "user", content: prompt)])
+        stream(prompt, options: GenerationOptions())
     }
 
-    private func streamSSE(messages: [Request.Message]) -> AsyncThrowingStream<AIStreamChunk, Error> {
+    public func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        var messages: [Request.Message] = []
+        if let system = options.system {
+            messages.append(.init(role: "system", content: system))
+        }
+        messages.append(.init(role: "user", content: prompt))
+        return streamSSE(messages: messages, options: options)
+    }
+
+    private func streamSSE(messages: [Request.Message], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 guard let url = URL(string: "\(baseURL)/chat/completions") else {
@@ -73,7 +99,14 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel {
                     model: model,
                     messages: messages,
                     stream: true,
-                    streamOptions: .init(includeUsage: true)
+                    streamOptions: .init(includeUsage: true),
+                    temperature: options.temperature,
+                    topP: options.topP,
+                    maxTokens: options.maxTokens,
+                    seed: options.seed,
+                    presencePenalty: options.presencePenalty,
+                    frequencyPenalty: options.frequencyPenalty,
+                    stop: options.stopSequences
                 )
                 do {
                     request.httpBody = try JSONEncoder().encode(body)
@@ -92,7 +125,6 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel {
                         do {
                             let chunk = try JSONDecoder().decode(StreamChunk.self, from: data)
 
-                            // Usage-only chunk (choices is empty) — emit as final chunk with usage
                             if let u = chunk.usage, chunk.choices.isEmpty {
                                 let usage = TokenUsage(inputTokens: u.promptTokens, outputTokens: u.completionTokens)
                                 continuation.yield(AIStreamChunk(text: "", finishReason: nil, usage: usage))
@@ -127,10 +159,24 @@ private extension OpenAICompatibleProvider {
         let messages: [Message]
         let stream: Bool
         let streamOptions: StreamOptions?
+        let temperature: Double?
+        let topP: Double?
+        let maxTokens: Int?
+        let seed: Int?
+        let presencePenalty: Double?
+        let frequencyPenalty: Double?
+        let stop: [String]?
 
         enum CodingKeys: String, CodingKey {
             case model, messages, stream
             case streamOptions = "stream_options"
+            case temperature
+            case topP = "top_p"
+            case maxTokens = "max_tokens"
+            case seed
+            case presencePenalty = "presence_penalty"
+            case frequencyPenalty = "frequency_penalty"
+            case stop
         }
 
         struct Message: Encodable {

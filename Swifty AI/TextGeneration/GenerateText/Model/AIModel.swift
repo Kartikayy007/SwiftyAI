@@ -1,5 +1,12 @@
 public protocol AIModel: Sendable {
     func generate(_ prompt: String) async throws -> AIResponse
+    func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse
+}
+
+public extension AIModel {
+    func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse {
+        try await generate(prompt)
+    }
 }
 
 public extension AIModel where Self == OpenAICompatibleProvider {

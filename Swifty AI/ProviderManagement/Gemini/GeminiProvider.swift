@@ -12,12 +12,24 @@ public struct GeminiProvider: AIModel, AIStreamModel {
     }
 
     public func generate(_ prompt: String) async throws -> AIResponse {
+        try await generate(prompt, options: GenerationOptions())
+    }
+
+    public func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse {
         let urlString = "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent"
         guard let url = URL(string: urlString) else {
             throw AIError.invalidResponse
         }
         let headers = ["x-goog-api-key": apiKey]
-        let body = Request(contents: [.init(role: "user", parts: [.init(text: prompt)])], systemInstruction: nil)
+        let systemInstruction = options.system.map {
+            Request.SystemInstruction(parts: [.init(text: $0)])
+        }
+        let generationConfig = Request.GenerationConfig(options: options)
+        let body = Request(
+            contents: [.init(role: "user", parts: [.init(text: prompt)])],
+            systemInstruction: systemInstruction,
+            generationConfig: generationConfig.isEmpty ? nil : generationConfig
+        )
 
         let data = try await httpPost(url: url, headers: headers, body: body, session: session)
 
@@ -55,17 +67,29 @@ public struct GeminiProvider: AIModel, AIStreamModel {
         let systemInstruction = systemText.map {
             Request.SystemInstruction(parts: [.init(text: $0)])
         }
-        return streamSSE(contents: contents, systemInstruction: systemInstruction)
+        return streamSSE(contents: contents, systemInstruction: systemInstruction, options: GenerationOptions())
     }
 
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        streamSSE(
+        stream(prompt, options: GenerationOptions())
+    }
+
+    public func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        let systemInstruction = options.system.map {
+            Request.SystemInstruction(parts: [.init(text: $0)])
+        }
+        return streamSSE(
             contents: [.init(role: "user", parts: [.init(text: prompt)])],
-            systemInstruction: nil
+            systemInstruction: systemInstruction,
+            options: options
         )
     }
 
-    private func streamSSE(contents: [Request.Content], systemInstruction: Request.SystemInstruction?) -> AsyncThrowingStream<AIStreamChunk, Error> {
+    private func streamSSE(
+        contents: [Request.Content],
+        systemInstruction: Request.SystemInstruction?,
+        options: GenerationOptions
+    ) -> AsyncThrowingStream<AIStreamChunk, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 let urlString = "https://generativelanguage.googleapis.com/v1beta/models/\(model):streamGenerateContent?alt=sse"
@@ -79,7 +103,12 @@ public struct GeminiProvider: AIModel, AIStreamModel {
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
 
-                let body = Request(contents: contents, systemInstruction: systemInstruction)
+                let generationConfig = Request.GenerationConfig(options: options)
+                let body = Request(
+                    contents: contents,
+                    systemInstruction: systemInstruction,
+                    generationConfig: generationConfig.isEmpty ? nil : generationConfig
+                )
                 do {
                     request.httpBody = try JSONEncoder().encode(body)
                 } catch {
@@ -127,10 +156,12 @@ private extension GeminiProvider {
     struct Request: Encodable {
         let contents: [Content]
         let systemInstruction: SystemInstruction?
+        let generationConfig: GenerationConfig?
 
         enum CodingKeys: String, CodingKey {
             case contents
             case systemInstruction = "system_instruction"
+            case generationConfig
         }
 
         struct Content: Encodable {
@@ -147,6 +178,27 @@ private extension GeminiProvider {
 
             struct Part: Encodable {
                 let text: String
+            }
+        }
+
+        struct GenerationConfig: Encodable {
+            let temperature: Double?
+            let topP: Double?
+            let topK: Int?
+            let maxOutputTokens: Int?
+            let stopSequences: [String]?
+
+            init(options: GenerationOptions) {
+                self.temperature = options.temperature
+                self.topP = options.topP
+                self.topK = options.topK
+                self.maxOutputTokens = options.maxTokens
+                self.stopSequences = options.stopSequences
+            }
+
+            var isEmpty: Bool {
+                temperature == nil && topP == nil && topK == nil && maxOutputTokens == nil
+                    && (stopSequences == nil || stopSequences!.isEmpty)
             }
         }
     }

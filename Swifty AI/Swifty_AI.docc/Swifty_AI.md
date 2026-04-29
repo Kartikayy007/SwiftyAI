@@ -362,6 +362,46 @@ print("Tokens used:", response.usage?.outputTokens ?? 0)
 
 ---
 
+## GenerationOptions
+
+All generation functions accept an optional `GenerationOptions` to control model behaviour. Every field is optional — unset fields are omitted from the request.
+
+```swift
+let options = GenerationOptions(
+    system: "You are a concise assistant.",
+    temperature: 0.7,
+    topP: 0.9,
+    topK: 40,          // Anthropic + Gemini only
+    maxTokens: 512,
+    seed: 42,          // OpenAI + Gemini
+    presencePenalty: 0.1,   // OpenAI-compatible only
+    frequencyPenalty: 0.1,  // OpenAI-compatible only
+    stopSequences: ["END"]
+)
+
+// generateText
+let response = try await generateText(model: "openai/gpt-4o-mini", prompt: "Hi", options: options)
+
+// streamText — with optional callbacks
+for try await chunk in streamText(
+    model: "anthropic/claude-sonnet-4-6",
+    prompt: "Tell me a story.",
+    options: GenerationOptions(temperature: 0.9, maxTokens: 1000),
+    onChunk: { print($0.text, terminator: "") },
+    onFinish: { print("\nDone. Tokens:", $0.usage?.outputTokens ?? 0) }
+) {}
+
+// generateObject
+let result = try await generateObject(
+    model: "gemini/gemini-2.5-flash",
+    prompt: "Suggest a sci-fi movie",
+    as: Movie.self,
+    options: GenerationOptions(temperature: 0.5)
+)
+```
+
+---
+
 ## generateObject
 
 Returns a decoded Swift struct. No manual JSON parsing.
@@ -610,9 +650,10 @@ print(response.text)
 
 ### Generation
 
-- ``generateText(model:prompt:)``
-- ``streamText(model:prompt:)``
-- ``generateObject(model:prompt:as:)``
+- ``generateText(model:prompt:options:)``
+- ``streamText(model:prompt:options:onChunk:onFinish:)``
+- ``generateObject(model:prompt:as:options:)``
+- ``GenerationOptions``
 - ``ObjectResponse``
 - ``JSONSchemaConvertible``
 

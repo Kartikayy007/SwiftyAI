@@ -12,6 +12,10 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
     }
 
     public func generate(_ prompt: String) async throws -> AIResponse {
+        try await generate(prompt, options: GenerationOptions())
+    }
+
+    public func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse {
         let url = URL(string: "https://api.anthropic.com/v1/messages")!
         let headers = [
             "x-api-key": apiKey,
@@ -19,10 +23,14 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
         ]
         let body = Request(
             model: model,
-            maxTokens: 1024,
+            maxTokens: options.maxTokens ?? 1024,
             messages: [.init(role: "user", content: prompt)],
-            system: nil,
-            stream: false
+            system: options.system,
+            stream: false,
+            temperature: options.temperature,
+            topP: options.topP,
+            topK: options.topK,
+            stopSequences: options.stopSequences
         )
 
         let data = try await httpPost(url: url, headers: headers, body: body, session: session)
@@ -53,14 +61,18 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
         let convo = messages
             .filter { $0.role != .system }
             .map { Request.Message(role: $0.role.rawValue, content: $0.content) }
-        return streamSSE(messages: convo, system: system)
+        return streamSSE(messages: convo, system: system, options: GenerationOptions())
     }
 
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        streamSSE(messages: [.init(role: "user", content: prompt)], system: nil)
+        stream(prompt, options: GenerationOptions())
     }
 
-    private func streamSSE(messages: [Request.Message], system: String?) -> AsyncThrowingStream<AIStreamChunk, Error> {
+    public func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        streamSSE(messages: [.init(role: "user", content: prompt)], system: options.system, options: options)
+    }
+
+    private func streamSSE(messages: [Request.Message], system: String?, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
@@ -71,10 +83,14 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
 
                 let body = Request(
                     model: model,
-                    maxTokens: 1024,
+                    maxTokens: options.maxTokens ?? 1024,
                     messages: messages,
                     system: system,
-                    stream: true
+                    stream: true,
+                    temperature: options.temperature,
+                    topP: options.topP,
+                    topK: options.topK,
+                    stopSequences: options.stopSequences
                 )
                 do {
                     request.httpBody = try JSONEncoder().encode(body)
@@ -135,6 +151,10 @@ private extension AnthropicProvider {
         let messages: [Message]
         let system: String?
         let stream: Bool
+        let temperature: Double?
+        let topP: Double?
+        let topK: Int?
+        let stopSequences: [String]?
 
         enum CodingKeys: String, CodingKey {
             case model
@@ -142,6 +162,10 @@ private extension AnthropicProvider {
             case messages
             case system
             case stream
+            case temperature
+            case topP = "top_p"
+            case topK = "top_k"
+            case stopSequences = "stop_sequences"
         }
 
         struct Message: Encodable {

@@ -3,7 +3,8 @@ import Foundation
 public func generateObject<T: Decodable & JSONSchemaConvertible>(
     model: some AIModel,
     prompt: String,
-    as type: T.Type = T.self
+    as type: T.Type = T.self,
+    options: GenerationOptions = GenerationOptions()
 ) async throws -> ObjectResponse<T> {
     let schema = T.jsonSchema
     let schemaData = try JSONSerialization.data(withJSONObject: schema)
@@ -18,7 +19,7 @@ public func generateObject<T: Decodable & JSONSchemaConvertible>(
     Return only the JSON object, no markdown, no explanation.
     """
 
-    let response = try await model.generate(fullPrompt)
+    let response = try await model.generate(fullPrompt, options: options)
     let cleaned = stripMarkdownFences(response.text)
 
     guard !cleaned.isEmpty, let data = cleaned.data(using: .utf8) else {
@@ -43,10 +44,11 @@ public func generateObject<T: Decodable & JSONSchemaConvertible>(
 public func generateObject<T: Decodable & JSONSchemaConvertible>(
     model: String,
     prompt: String,
-    as type: T.Type = T.self
+    as type: T.Type = T.self,
+    options: GenerationOptions = GenerationOptions()
 ) async throws -> ObjectResponse<T> {
     let resolved = try await AIRegistry.shared.resolve(model)
-    return try await generateObject(model: resolved, prompt: prompt, as: type)
+    return try await generateObject(model: resolved, prompt: prompt, as: type, options: options)
 }
 
 private func stripMarkdownFences(_ text: String) -> String {
