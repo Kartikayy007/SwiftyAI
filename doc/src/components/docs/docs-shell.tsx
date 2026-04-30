@@ -61,6 +61,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             <Button
               variant="ghost"
               size="icon"
+              nativeButton={false}
               aria-label="GitHub"
               render={
                 <a
