@@ -1,0 +1,71 @@
+# Tools
+
+Tools let the model request your Swift functions during a generation loop.
+
+## What it does
+
+A tool has a name, description, input schema, and execution closure. The model decides when to call it, and SwiftyAI feeds the result back into the loop.
+
+## Why it matters
+
+Tools let models interact with live application capabilities such as search, calendars, databases, payment checks, and internal APIs.
+
+## Before you start
+
+1. Give each tool a clear name.
+
+2. Describe exactly when the model should use it.
+
+3. Validate tool inputs before touching external systems.
+
+## Steps
+
+<Step title="Define the tool">
+Create typed or dynamic tools depending on whether the input shape is known at compile time.
+</Step>
+
+<Step title="Pass tools to the model loop">
+Use [tool calling](/docs/tool-calling) for multi step execution.
+</Step>
+
+<Step title="Observe tool behavior">
+Use [telemetry](/docs/telemetry) or [agent UI stream](/docs/agent-ui-stream) to inspect calls.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let weatherTool = AITool(
+    name: "get_weather",
+    description: "Get the current weather for a city.",
+    parameters: [
+        "type": "object",
+        "properties": [
+            "city": ["type": "string"]
+        ],
+        "required": ["city"]
+    ]
+) { arguments in
+    "Sunny and 24C"
+}
+
+let result = try await generateWithTools(
+    model: model,
+    prompt: "What should I wear in Bengaluru today?",
+    tools: [weatherTool]
+)
+
+print(result.text)
+```
+
+## API notes
+
+Prefer typed tools for app code and dynamic tools for MCP, plugin, or runtime discovered capabilities.
+
+## Related docs
+
+<Related>
+Read [tool calling](/docs/tool-calling), [MCP](/docs/mcp), and [agent UI stream](/docs/agent-ui-stream).
+</Related>

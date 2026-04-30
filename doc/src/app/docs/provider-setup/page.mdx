@@ -1,0 +1,62 @@
+# Provider Setup
+
+Provider setup connects SwiftyAI to model services such as OpenAI compatible APIs, Anthropic, Gemini, Cohere, Ollama, and Apple local models.
+
+## What it does
+
+Providers implement SDK model protocols so the same generation, embedding, reranking, media, and tool APIs can work across different backends.
+
+## Why it matters
+
+You can start with one provider and later move calls behind the [provider registry](/docs/provider-registry) without rewriting feature code.
+
+## Before you start
+
+1. Store API keys in environment variables or secure app storage.
+
+2. Pick a model for the capability you need.
+
+3. Use local providers such as [Ollama or Apple Foundation Models](/docs/local-models) when privacy or offline behavior matters.
+
+## Steps
+
+<Step title="Create a direct model">
+Direct model instances are the clearest setup for examples, tests, and small projects.
+</Step>
+
+<Step title="Move to registry strings when the app grows">
+Use [provider registry](/docs/provider-registry) when you want `"openai/gpt-4o-mini"` style routing.
+</Step>
+
+<Step title="Keep test models local">
+Unit tests should use mock models instead of live providers.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let openAI = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-4o-mini"
+)
+
+let gemini = GeminiProvider(
+    apiKey: ProcessInfo.processInfo.environment["GEMINI_API_KEY"]!,
+    model: "gemini-2.5-flash"
+)
+
+let local = OllamaProvider(model: "llama3.2")
+```
+
+## API notes
+
+OpenAI compatible providers cover services that expose chat completions style APIs. Provider specific models are useful when a service needs different request shapes.
+
+## Related docs
+
+<Related>
+See [providers](/docs/providers), [custom providers](/docs/custom-providers), and [local models](/docs/local-models).
+</Related>

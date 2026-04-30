@@ -1,0 +1,61 @@
+# AICompletion
+
+`AICompletion` manages single prompt completion state for Swift apps.
+
+## What it does
+
+It stores prompt input, generated output, loading state, errors, and an internal task for cancellation.
+
+## Why it matters
+
+Many AI features are not chat. `AICompletion` fits rewrite boxes, summarizers, title generators, and one shot assistant actions.
+
+## Before you start
+
+1. Choose a text model.
+
+2. Bind `prompt` or `input` to your own field.
+
+3. Render `completion` or `output` in your own view.
+
+## Steps
+
+<Step title="Create AICompletion">
+Initialize it with a direct model or registry model string.
+</Step>
+
+<Step title="Send synchronously">
+Call `send`; the hook starts and stores the task internally.
+</Step>
+
+<Step title="Handle state">
+Use `isLoading`, `error`, `stop`, and `reset`.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+@MainActor
+func summarize(completion: AICompletion) {
+    completion.prompt = "Summarize this release note in one sentence."
+    completion.send()
+
+    if let error = completion.error {
+        print(error)
+    }
+
+    print(completion.output)
+}
+```
+
+## API notes
+
+Use [AIChat](/docs/ai-chat) when the user expects multi turn history. Use `AICompletion` for single prompt workflows.
+
+## Related docs
+
+<Related>
+Read [SwiftUI hooks](/docs/swiftui-hooks), [generate text](/docs/generate-text), and [generation options](/docs/generation-options).
+</Related>

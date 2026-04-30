@@ -1,0 +1,68 @@
+# Embeddings
+
+Embeddings convert text into vectors that can be compared by meaning.
+
+## What it does
+
+Use `embed` for one text, `embedMany` for batches, and `cosineSimilarity` to compare vectors.
+
+## Why it matters
+
+Embeddings unlock semantic search, memory, duplicate detection, recommendations, and retrieval augmented generation.
+
+## Before you start
+
+1. Choose an embedding provider.
+
+2. Keep vectors from the same model together.
+
+3. Store document IDs and metadata with vectors.
+
+## Steps
+
+<Step title="Create an embedding model">
+Use an OpenAI compatible embedding provider or Gemini embedding provider.
+</Step>
+
+<Step title="Embed documents">
+Use `embedMany` for batches to reduce request overhead.
+</Step>
+
+<Step title="Rank by similarity">
+Compare the query vector to document vectors using `cosineSimilarity`.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let embeddingModel = OpenAICompatibleEmbeddingProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "text-embedding-3-small"
+)
+
+let query = try await embed(model: embeddingModel, value: "How do I stream text?")
+let docs = try await embedMany(
+    model: embeddingModel,
+    values: [
+        "Use streamText for token by token output.",
+        "Use generateObject for typed JSON.",
+        "Use rerank to reorder retrieved documents."
+    ]
+)
+
+let scores = docs.embeddings.map { cosineSimilarity(query.embedding, $0.embedding) }
+print(scores)
+```
+
+## API notes
+
+Use [reranking](/docs/reranking) after vector search when you want a model to reorder candidates by query relevance.
+
+## Related docs
+
+<Related>
+Read [retrieval](/docs/retrieval), [reranking](/docs/reranking), and [provider registry](/docs/provider-registry).
+</Related>
