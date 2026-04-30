@@ -1061,6 +1061,51 @@ Tool calling uses native request fields for OpenAI-compatible providers, includi
 
 ---
 
+## MCP Client
+
+Use ``MCPClient`` to connect SwiftyAI to Model Context Protocol servers through an app-provided ``MCPTransport``. The SDK provides the client primitives and tool adapter; it does not ship a concrete network, stdio, or server process transport.
+
+```swift
+let client = MCPClient(transport: myTransport)
+
+try await client.initialize()
+let mcpTools = try await client.listTools()
+let tools = mcpTools.asAITools(client: client)
+
+let result = try await generateWithTools(
+    model: "openai/gpt-4o-mini",
+    prompt: "Use the available tools to answer.",
+    tools: tools
+)
+```
+
+The client sends the MCP `initialize` request first, validates the negotiated protocol version, and then sends `notifications/initialized`. `listTools()` fetches all tool pages. `callTool(name:arguments:)` invokes an MCP tool directly and returns an ``MCPCallToolResult``.
+
+### Custom transports
+
+Implement ``MCPTransport`` for the transport your app needs. Tests can use an in-memory transport with queued JSON-RPC responses:
+
+```swift
+actor MockTransport: MCPTransport {
+    var responses: [Data]
+
+    init(responses: [Data]) {
+        self.responses = responses
+    }
+
+    func send(_ data: Data, expectsResponse: Bool) async throws -> Data? {
+        guard expectsResponse else { return nil }
+        return responses.removeFirst()
+    }
+}
+```
+
+### Tool conversion
+
+``MCPTool/asAITool(client:)`` converts a discovered MCP tool into an executable ``AITool``. The adapter preserves the MCP input and output schemas. When the generated tool runs, it calls `tools/call` through the client and returns text content to the SDK tool loop. MCP tool execution errors with `isError: true` are thrown as ``MCPToolExecutionError`` so the existing tool error policy can mark the tool result as an error.
+
+---
+
 ## generateObject
 
 Returns a decoded Swift struct. No manual JSON parsing is required.
@@ -1480,6 +1525,18 @@ print(response.text)
 - ``tool(name:description:inputSchema:outputSchema:execute:)``
 - ``dynamicTool(name:description:inputSchema:outputSchema:execute:)``
 - ``ToolExecutionOptions``
+- ``MCPClient``
+- ``MCPTransport``
+- ``MCPTool``
+- ``MCPCallToolResult``
+- ``MCPToolContent``
+- ``MCPToolExecutionError``
+- ``MCPJSONValue``
+- ``MCPJSONRPCRequest``
+- ``MCPJSONRPCNotification``
+- ``MCPJSONRPCResponse``
+- ``MCPJSONRPCError``
+- ``MCPClientError``
 - ``AIStepResult``
 - ``AIStopCondition``
 - ``AgentEvent``
