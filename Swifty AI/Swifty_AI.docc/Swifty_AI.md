@@ -954,6 +954,39 @@ Built-in stop conditions:
 
 `streamWithTools` exposes the same loop as an `AsyncThrowingStream<AIAgentChunk, Error>` and supports `onChunk`, `onStepFinish`, and `onFinish` callbacks.
 
+`createAgentUIStream` exposes the same loop as typed ``AgentEvent`` values, so apps can render agent progress in their own UI without adopting SDK-provided views.
+
+```swift
+let events = createAgentUIStream(
+    model: "openai/gpt-4o-mini",
+    prompt: "What is the weather in Delhi?",
+    tools: [weather]
+)
+
+for try await event in events {
+    switch event {
+    case .agentStarted:
+        print("Agent started")
+    case .stepStarted(let step):
+        print("Step started:", step.stepIndex)
+    case .modelChunk(let chunk):
+        print(chunk.text, terminator: "")
+    case .toolCallStarted(let event):
+        print("Tool requested:", event.toolCall.name)
+    case .toolCallFinished(let event):
+        print("Tool result:", event.toolResult.content)
+    case .stepFinished(let step):
+        print("Step finished:", step.stepIndex)
+    case .agentFinished(let event):
+        print("Final text:", event.result.text)
+    case .failed(let error):
+        print("Agent failed:", error.localizedDescription)
+    }
+}
+```
+
+If the stream fails, SwiftyAI yields `.failed(error)` before finishing the `AsyncThrowingStream` with the same error.
+
 ### Typed and dynamic tools
 
 Use `tool()` when your tool has typed Codable input and output:
@@ -1398,6 +1431,7 @@ print(response.text)
 - ``simulateStreamingMiddleware(chunkSize:delay:)``
 - ``generateWithTools(model:prompt:tools:options:maxSteps:stopWhen:onStepFinish:toolOptions:)``
 - ``streamWithTools(model:prompt:tools:options:maxSteps:stopWhen:onChunk:onStepFinish:onFinish:toolOptions:)``
+- ``createAgentUIStream(model:prompt:tools:options:maxSteps:stopWhen:onEvent:onStepFinish:onFinish:toolOptions:)``
 - ``generateObject(model:prompt:as:options:)``
 - ``streamObject(model:prompt:output:options:onPartial:onFinish:)``
 - ``embed(model:input:options:)``
@@ -1448,6 +1482,11 @@ print(response.text)
 - ``ToolExecutionOptions``
 - ``AIStepResult``
 - ``AIStopCondition``
+- ``AgentEvent``
+- ``AgentToolCallEvent``
+- ``AgentToolResultEvent``
+- ``AgentStepEvent``
+- ``AgentFinishEvent``
 
 ### Providers
 

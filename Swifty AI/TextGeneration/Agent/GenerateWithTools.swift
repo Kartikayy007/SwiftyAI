@@ -132,7 +132,7 @@ public func streamWithTools(
     }
 }
 
-private func runToolLoop(
+func runToolLoop(
     model: any AIToolCallingModel,
     messages: inout [AIAgentMessage],
     tools: [AITool],
@@ -141,6 +141,7 @@ private func runToolLoop(
     stopWhen: [AIStopCondition],
     onStepFinish: ((AIStep) -> Void)?,
     toolOptions: ToolExecutionOptions,
+    onAgentEvent: ((AgentEvent) -> Void)? = nil,
     onEvent: ((AIAgentChunk) -> Void)?
 ) async throws -> AIStepResult {
     var steps: [AIStep] = []
@@ -153,15 +154,20 @@ private func runToolLoop(
             throw CancellationError()
         }
 
+        onAgentEvent?(.stepStarted(AgentStepEvent(stepIndex: index)))
+
         let response = try await model.generateStep(messages: messages, tools: tools, options: options)
         finalText += response.text
         lastUsage = response.usage ?? lastUsage
         lastFinishReason = response.finishReason ?? lastFinishReason
 
         if !response.text.isEmpty {
-            onEvent?(AIAgentChunk(text: response.text, stepIndex: index, usage: response.usage, finishReason: response.finishReason))
+            let chunk = AIAgentChunk(text: response.text, stepIndex: index, usage: response.usage, finishReason: response.finishReason)
+            onAgentEvent?(.modelChunk(chunk))
+            onEvent?(chunk)
         }
         for toolCall in response.toolCalls {
+            onAgentEvent?(.toolCallStarted(AgentToolCallEvent(stepIndex: index, toolCall: toolCall)))
             onEvent?(AIAgentChunk(stepIndex: index, toolCall: toolCall))
         }
 
@@ -177,6 +183,7 @@ private func runToolLoop(
 
         if shouldStop(step: step, maxSteps: maxSteps, stopWhen: stopWhen) {
             steps.append(step)
+            onAgentEvent?(.stepFinished(AgentStepEvent(stepIndex: index, step: step)))
             onStepFinish?(step)
             return AIStepResult(text: finalText, steps: steps, usage: lastUsage, finishReason: lastFinishReason)
         }
@@ -185,6 +192,7 @@ private func runToolLoop(
         for result in toolResults {
             messages.append(.init(role: "tool", content: result.content, toolCallID: result.toolCallID))
             toolOptions.onToolResult?(result)
+            onAgentEvent?(.toolCallFinished(AgentToolResultEvent(stepIndex: index, toolResult: result)))
             onEvent?(AIAgentChunk(stepIndex: index, toolResult: result))
         }
         toolOptions.onTelemetry?(.completed(stepIndex: index))
@@ -198,6 +206,7 @@ private func runToolLoop(
             finishReason: response.finishReason
         )
         steps.append(step)
+        onAgentEvent?(.stepFinished(AgentStepEvent(stepIndex: index, step: step)))
         onStepFinish?(step)
 
         if response.toolCalls.isEmpty {
@@ -214,7 +223,7 @@ private func runToolLoop(
     )
 }
 
-private func initialAgentMessages(prompt: String, options: GenerationOptions) -> [AIAgentMessage] {
+func initialAgentMessages(prompt: String, options: GenerationOptions) -> [AIAgentMessage] {
     var messages: [AIAgentMessage] = []
     if let system = options.system {
         messages.append(.init(role: "system", content: system))
