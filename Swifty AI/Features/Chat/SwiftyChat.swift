@@ -83,14 +83,12 @@ public final class SwiftyChat {
             history.append(ChatMessage(role: .system, content: system))
         }
 
-        let conversationMessages: [ChatMessage]
         if let limit = maxMessages {
-            conversationMessages = Array(messages.suffix(limit))
-        } else {
-            conversationMessages = messages
+            history.append(contentsOf: messages)
+            return pruneMessages(history, maxMessages: limit)
         }
 
-        history.append(contentsOf: conversationMessages)
+        history.append(contentsOf: messages)
         return history
     }
 }

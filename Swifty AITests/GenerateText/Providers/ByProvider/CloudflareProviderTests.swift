@@ -123,7 +123,11 @@ final class CloudflareProviderTests: XCTestCase {
             apiKey: apiKey,
             model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
         )
-        let response = try await liveProvider.generate("Reply with exactly: ok")
-        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        do {
+            let response = try await liveProvider.generate("Reply with exactly: ok")
+            XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "Cloudflare")
+        }
     }
 }

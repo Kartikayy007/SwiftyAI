@@ -75,4 +75,58 @@ actor AIRegistry {
             throw AIError.providerNotConfigured(provider)
         }
     }
+
+    func resolveImageModel(_ modelString: String) throws -> any AIImageModel {
+        let resolved = try resolveMediaProvider(modelString)
+        guard let model = resolved as? any AIImageModel else {
+            throw AIError.unsupportedFeature("Image generation is not supported by \(modelString)")
+        }
+        return model
+    }
+
+    func resolveTranscriptionModel(_ modelString: String) throws -> any AITranscriptionModel {
+        let resolved = try resolveMediaProvider(modelString)
+        guard let model = resolved as? any AITranscriptionModel else {
+            throw AIError.unsupportedFeature("Transcription is not supported by \(modelString)")
+        }
+        return model
+    }
+
+    func resolveSpeechModel(_ modelString: String) throws -> any AISpeechModel {
+        let resolved = try resolveMediaProvider(modelString)
+        guard let model = resolved as? any AISpeechModel else {
+            throw AIError.unsupportedFeature("Speech generation is not supported by \(modelString)")
+        }
+        return model
+    }
+
+    func resolveVideoModel(_ modelString: String) throws -> any AIVideoModel {
+        let resolved = try resolveMediaProvider(modelString)
+        guard let model = resolved as? any AIVideoModel else {
+            throw AIError.unsupportedFeature("Video generation is not supported by \(modelString)")
+        }
+        return model
+    }
+
+    private func resolveMediaProvider(_ modelString: String) throws -> Any {
+        let parts = modelString.split(separator: "/", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { throw AIError.invalidModelString(modelString) }
+        let provider = parts[0].lowercased()
+        let model = parts[1]
+
+        switch provider {
+        case "openai":
+            guard case .apiKey(let key) = configs["openai"] else {
+                throw AIError.providerNotConfigured("openai")
+            }
+            return OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: key, model: model)
+        case "gemini":
+            guard case .apiKey(let key) = configs["gemini"] else {
+                throw AIError.providerNotConfigured("gemini")
+            }
+            return GeminiProvider(apiKey: key, model: model)
+        default:
+            throw AIError.unsupportedFeature("Media generation is not supported for provider '\(provider)'")
+        }
+    }
 }

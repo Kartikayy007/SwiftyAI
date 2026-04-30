@@ -1,8 +1,8 @@
 import Foundation
 
-public struct GeminiProvider: AIModel, AIStreamModel {
-    private let apiKey: String
-    private let model: String
+public struct GeminiProvider: AIModel, AIStreamModel, AIToolCallingModel, AIImageModel, AITranscriptionModel, AISpeechModel, AIVideoModel {
+    let apiKey: String
+    let model: String
     let session: URLSession
 
     public init(apiKey: String, model: String, session: URLSession = .shared) {
@@ -16,6 +16,10 @@ public struct GeminiProvider: AIModel, AIStreamModel {
     }
 
     public func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse {
+        try await generate([.text(prompt)], options: options)
+    }
+
+    public func generate(_ prompt: [AIMessageContent], options: GenerationOptions) async throws -> AIResponse {
         let urlString = "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent"
         guard let url = URL(string: urlString) else {
             throw AIError.invalidResponse
@@ -26,12 +30,12 @@ public struct GeminiProvider: AIModel, AIStreamModel {
         }
         let generationConfig = Request.GenerationConfig(options: options)
         let body = Request(
-            contents: [.init(role: "user", parts: [.init(text: prompt)])],
+            contents: [.init(role: "user", parts: try Request.Content.Part.parts(from: prompt))],
             systemInstruction: systemInstruction,
             generationConfig: generationConfig.isEmpty ? nil : generationConfig
         )
 
-        let data = try await httpPost(url: url, headers: headers, body: body, session: session)
+        let data = try await httpPost(url: url, headers: headers, body: body, session: session, options: options)
 
         do {
             let decoded = try JSONDecoder().decode(Response.self, from: data)
@@ -58,16 +62,21 @@ public struct GeminiProvider: AIModel, AIStreamModel {
         let systemText = messages.first(where: { $0.role == .system })?.content
         let contents = messages
             .filter { $0.role != .system }
-            .map { msg in
+        let mapped: [Request.Content]
+        do {
+            mapped = try contents.map { msg in
                 Request.Content(
                     role: msg.role == .assistant ? "model" : "user",
-                    parts: [.init(text: msg.content)]
+                    parts: try Request.Content.Part.parts(from: msg.parts)
                 )
             }
+        } catch {
+            return AsyncThrowingStream { $0.finish(throwing: error) }
+        }
         let systemInstruction = systemText.map {
             Request.SystemInstruction(parts: [.init(text: $0)])
         }
-        return streamSSE(contents: contents, systemInstruction: systemInstruction, options: GenerationOptions())
+        return streamSSE(contents: mapped, systemInstruction: systemInstruction, options: GenerationOptions())
     }
 
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
@@ -75,14 +84,22 @@ public struct GeminiProvider: AIModel, AIStreamModel {
     }
 
     public func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        stream([.text(prompt)], options: options)
+    }
+
+    public func stream(_ prompt: [AIMessageContent], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
         let systemInstruction = options.system.map {
             Request.SystemInstruction(parts: [.init(text: $0)])
         }
-        return streamSSE(
-            contents: [.init(role: "user", parts: [.init(text: prompt)])],
-            systemInstruction: systemInstruction,
-            options: options
-        )
+        do {
+            return streamSSE(
+                contents: [.init(role: "user", parts: try Request.Content.Part.parts(from: prompt))],
+                systemInstruction: systemInstruction,
+                options: options
+            )
+        } catch {
+            return AsyncThrowingStream { $0.finish(throwing: error) }
+        }
     }
 
     private func streamSSE(
@@ -119,7 +136,7 @@ public struct GeminiProvider: AIModel, AIStreamModel {
                 var lastUsage: TokenUsage?
 
                 do {
-                    for try await jsonString in sseLines(request: request, session: session) {
+                    for try await jsonString in sseLines(request: request, session: session, options: options) {
                         if Task.isCancelled {
                             continuation.finish()
                             return
@@ -169,7 +186,70 @@ private extension GeminiProvider {
             let parts: [Part]
 
             struct Part: Encodable {
-                let text: String
+                let text: String?
+                let inlineData: InlineData?
+                let fileData: FileData?
+
+                enum CodingKeys: String, CodingKey {
+                    case text
+                    case inlineData = "inline_data"
+                    case fileData = "file_data"
+                }
+
+                init(text: String) {
+                    self.text = text
+                    self.inlineData = nil
+                    self.fileData = nil
+                }
+
+                private init(text: String? = nil, inlineData: InlineData? = nil, fileData: FileData? = nil) {
+                    self.text = text
+                    self.inlineData = inlineData
+                    self.fileData = fileData
+                }
+
+                init(content: AIMessageContent) throws {
+                    switch content {
+                    case .text(let text):
+                        self.init(text: text)
+                    case .imageURL(let url, _), .pdfURL(let url, _), .videoURL(let url), .fileURL(let url, _, _):
+                        self.init(
+                            fileData: FileData(
+                                mimeType: content.mediaType?.rawValue ?? AIMediaType.octetStream.rawValue,
+                                fileURI: url.absoluteString
+                            )
+                        )
+                    case .imageBase64, .imageData, .pdfBase64, .pdfData, .audioBase64, .audioData, .videoBase64, .videoData, .fileBase64, .fileData:
+                        guard let mediaType = content.mediaType, let data = content.rawBase64 else {
+                            throw AIError.invalidResponse
+                        }
+                        self.init(inlineData: InlineData(mimeType: mediaType.rawValue, data: data))
+                    }
+                }
+
+                static func parts(from contents: [AIMessageContent]) throws -> [Part] {
+                    try contents.map(Part.init(content:))
+                }
+
+                struct InlineData: Encodable {
+                    let mimeType: String
+                    let data: String
+
+                    enum CodingKeys: String, CodingKey {
+                        case mimeType = "mime_type"
+                        case data
+                    }
+                }
+
+                struct FileData: Encodable {
+                    let mimeType: String
+                    let fileURI: String
+
+                    enum CodingKeys: String, CodingKey {
+                        case mimeType = "mime_type"
+                        case fileURI = "file_uri"
+                    }
+                }
             }
         }
 
@@ -221,7 +301,7 @@ private extension GeminiProvider {
                 let parts: [Part]
 
                 struct Part: Decodable {
-                    let text: String
+                    let text: String?
                 }
             }
         }

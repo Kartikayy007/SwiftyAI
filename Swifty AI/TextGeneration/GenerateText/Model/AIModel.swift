@@ -1,11 +1,16 @@
 public protocol AIModel: Sendable {
     func generate(_ prompt: String) async throws -> AIResponse
     func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse
+    func generate(_ prompt: [AIMessageContent], options: GenerationOptions) async throws -> AIResponse
 }
 
 public extension AIModel {
     func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse {
         try await generate(prompt)
+    }
+
+    func generate(_ prompt: [AIMessageContent], options: GenerationOptions) async throws -> AIResponse {
+        try await generate(prompt.textContent, options: options)
     }
 }
 
