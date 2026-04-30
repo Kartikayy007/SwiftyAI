@@ -1,0 +1,60 @@
+# Custom Providers
+
+Custom providers let your own services conform to SwiftyAI model protocols.
+
+## What it does
+
+You can wrap an internal model gateway, mock service, enterprise proxy, or experimental backend behind SDK protocols.
+
+## Why it matters
+
+Not every model endpoint should become SDK core. Custom providers keep extension points public without bloating built in provider code.
+
+## Before you start
+
+1. Choose the exact protocol your provider supports.
+
+2. Keep request and response mapping isolated.
+
+3. Add tests with deterministic fake responses.
+
+## Steps
+
+<Step title="Conform to the protocol">
+Implement the smallest model protocol your feature needs.
+</Step>
+
+<Step title="Return SDK response types">
+Map provider responses into `AIResponse`, stream chunks, embeddings, or rerank results.
+</Step>
+
+<Step title="Register the provider">
+Expose it through [provider registry](/docs/provider-registry) when app code should resolve it by string.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+struct InternalTextModel: AIModel {
+    func generate(_ prompt: String) async throws -> AIResponse {
+        AIResponse(text: "Internal answer for: \(prompt)")
+    }
+}
+
+let response = try await generateText(
+    model: InternalTextModel(),
+    prompt: "Summarize the incident report."
+)
+```
+
+## API notes
+
+Prefer protocol conformance for real backends and mock models for tests. Keep custom providers free of app UI assumptions.
+
+## Related docs
+
+<Related>
+Read [providers](/docs/providers), [provider registry](/docs/provider-registry), and [telemetry](/docs/telemetry).
+</Related>

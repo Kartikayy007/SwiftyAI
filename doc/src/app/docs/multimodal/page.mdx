@@ -1,0 +1,59 @@
+# Multimodal Input
+
+Multimodal input sends text with images, PDFs, audio, video, or generic files where the provider supports it.
+
+## What it does
+
+SwiftyAI message content can represent mixed input parts so provider implementations can encode the correct request body.
+
+## Why it matters
+
+Many product workflows start with a document, screenshot, receipt, support image, or audio clip instead of plain text.
+
+## Before you start
+
+1. Confirm the selected provider supports the input type.
+
+2. Keep file size and privacy constraints in mind.
+
+3. Prefer typed content parts over ad hoc prompt strings.
+
+## Steps
+
+<Step title="Create message parts">
+Combine text with URLs, base64 data, or file data.
+</Step>
+
+<Step title="Generate or structure output">
+Use [generate text](/docs/generate-text) for prose or [generate object](/docs/generate-object) for extraction.
+</Step>
+
+<Step title="Handle provider limits">
+Fallback gracefully when a provider rejects an unsupported part.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let response = try await generateText(
+    model: model,
+    prompt: [
+        .text("Describe the main issue in this screenshot."),
+        .imageURL(URL(string: "https://example.com/screenshot.png")!)
+    ]
+)
+
+print(response.text)
+```
+
+## API notes
+
+OpenAI compatible, Anthropic, and Gemini providers encode multimodal inputs differently. The SDK keeps that detail behind provider implementations.
+
+## Related docs
+
+<Related>
+Read [image generation](/docs/image-generation), [audio](/docs/audio), and [video](/docs/video).
+</Related>

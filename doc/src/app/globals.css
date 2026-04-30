@@ -124,7 +124,35 @@
     @apply mt-12 scroll-m-20 border-b pb-3 text-2xl font-semibold tracking-normal;
   }
 
+  .docs-content h3 {
+    @apply mt-8 scroll-m-20 text-xl font-semibold tracking-normal;
+  }
+
   .docs-content p {
     @apply mt-4 leading-7 text-muted-foreground;
+  }
+
+  .docs-content a {
+    @apply font-medium text-blue-600 underline-offset-4 hover:underline dark:text-blue-400;
+  }
+
+  .docs-content ol {
+    @apply my-6 ml-6 list-decimal space-y-2 text-muted-foreground;
+  }
+
+  .docs-content li {
+    @apply leading-7;
+  }
+
+  .docs-content code {
+    @apply rounded-md bg-muted px-1.5 py-0.5 font-mono text-sm text-foreground;
+  }
+
+  .docs-content pre {
+    @apply my-6 overflow-x-auto rounded-lg border bg-black p-4 text-sm text-white;
+  }
+
+  .docs-content pre code {
+    @apply bg-transparent p-0 text-white;
   }
 }

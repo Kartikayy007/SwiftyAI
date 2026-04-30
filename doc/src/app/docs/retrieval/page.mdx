@@ -1,0 +1,67 @@
+# Retrieval
+
+Retrieval is the pattern of finding relevant context before asking a model to answer.
+
+## What it does
+
+SwiftyAI already provides the core pieces: [embeddings](/docs/embeddings), `cosineSimilarity`, [reranking](/docs/reranking), and generation.
+
+## Why it matters
+
+RAG keeps answers grounded in your documents instead of relying only on model memory.
+
+## Before you start
+
+1. Chunk source documents.
+
+2. Embed each chunk.
+
+3. Store vectors with IDs and metadata.
+
+4. Retrieve and optionally rerank before generation.
+
+## Steps
+
+<Step title="Prepare documents">
+Split long text into chunks that preserve meaning.
+</Step>
+
+<Step title="Embed and search">
+Use `embedMany` for documents and `embed` for the query.
+</Step>
+
+<Step title="Rerank and answer">
+Use reranked documents as context for `generateText` or `streamText`.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let queryVector = try await embed(model: embeddingModel, value: "How do tools work?")
+
+let ranked = storedDocuments
+    .map { document in
+        (document, cosineSimilarity(queryVector.embedding, document.embedding))
+    }
+    .sorted { $0.1 > $1.1 }
+    .prefix(5)
+
+let context = ranked.map(\.0.content).joined(separator: "\n\n")
+
+let answer = try await generateText(
+    model: model,
+    prompt: "Use this context to answer:\n\(context)\n\nQuestion: How do tools work?"
+)
+```
+
+## API notes
+
+A higher level vector store can be layered on top of these primitives later. Today the shipped pieces are usable directly.
+
+## Related docs
+
+<Related>
+Read [embeddings](/docs/embeddings), [reranking](/docs/reranking), and [generate text](/docs/generate-text).
+</Related>
