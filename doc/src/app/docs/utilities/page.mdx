@@ -1,0 +1,55 @@
+# Utilities
+
+Utilities are small helpers that make SDK features easier to test, stream, and manage.
+
+## What it does
+
+SwiftyAI includes helpers for IDs, stream simulation, smooth streaming, UI message validation, pruning, truncation, and context management.
+
+## Why it matters
+
+These helpers remove repeated product glue around common AI workflows.
+
+## Before you start
+
+1. Use utilities where they clarify code.
+
+2. Keep business rules in your app layer.
+
+3. Prefer deterministic utilities in tests.
+
+## Steps
+
+<Step title="Generate IDs">
+Use `generateId` for message, request, or call identifiers.
+</Step>
+
+<Step title="Manage messages">
+Use message validation, pruning, and truncation helpers.
+</Step>
+
+<Step title="Shape streams">
+Use simulation and smoothing helpers for tests and user experience.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let requestId = generateId(prefix: "req")
+let callId = generateId(prefix: "call")
+
+print(requestId)
+print(callId)
+```
+
+## API notes
+
+Telemetry uses compact ID prefixes such as `req_` and `call_` for public event values.
+
+## Related docs
+
+<Related>
+Read [message management](/docs/message-management), [streaming utilities](/docs/streaming-utilities), and [telemetry](/docs/telemetry).
+</Related>
