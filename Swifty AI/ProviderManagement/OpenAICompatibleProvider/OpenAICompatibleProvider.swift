@@ -327,7 +327,11 @@ private extension OpenAICompatibleProvider {
 
             init(role: String, parts: [AIMessageContent]) {
                 self.role = role
-                self.content = .parts(parts.map(ContentPart.init(content:)))
+                if parts.count == 1, case .text(let text) = parts[0] {
+                    self.content = .string(text)
+                } else {
+                    self.content = .parts(parts.map(ContentPart.init(content:)))
+                }
                 self.toolCalls = nil
                 self.toolCallID = nil
                 self.name = nil
