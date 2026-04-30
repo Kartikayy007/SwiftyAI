@@ -43,6 +43,12 @@ struct AppRootView: View {
                     GenerateObjectExampleView()
                 case .chat:
                     ChatExampleView()
+                case .aiChatHook:
+                    AIChatHookExampleView()
+                case .aiCompletionHook:
+                    AICompletionHookExampleView()
+                case .embeddings:
+                    EmbeddingsExampleView()
                 case .tools:
                     ToolsExampleView()
                 case .options:
