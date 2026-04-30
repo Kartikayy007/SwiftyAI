@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { GitBranch, Menu, Search } from "lucide-react";
+import { GitBranch, Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { DocsSearch } from "@/components/docs/docs-search";
 import { DocsSidebar } from "@/components/docs/docs-sidebar";
 import { SwiftyLogo } from "@/components/docs/swifty-logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -56,13 +57,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           </Link>
 
           <div className="ml-auto flex items-center gap-2">
-            <Button
-              variant="outline"
-              className="hidden h-9 w-52 justify-start gap-2 text-muted-foreground md:flex"
-            >
-              <Search className="h-4 w-4" />
-              Search docs
-            </Button>
+            <DocsSearch />
             <Button
               variant="ghost"
               size="icon"

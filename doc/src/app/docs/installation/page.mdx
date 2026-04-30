@@ -1,0 +1,65 @@
+# Installation
+
+Install SwiftyAI into a Swift package or Xcode project before configuring providers and calling models.
+
+## What it does
+
+Installation makes the public SDK module available to your app, server, or test target.
+
+## Why it matters
+
+Most SwiftyAI APIs are plain Swift async functions and protocols. Once the package is available, you can use the same APIs across command line tools, server code, and Swift app state objects.
+
+## Before you start
+
+1. Use a supported Swift toolchain.
+
+2. Decide whether your project uses Swift Package Manager directly or an Xcode package dependency.
+
+3. Keep provider keys outside source control.
+
+## Steps
+
+<Step title="Add the package dependency">
+Add the repository URL to your package manifest or through Xcode package dependencies.
+</Step>
+
+<Step title="Import the SDK module">
+Use `import Swifty_AI` in files that call the SDK.
+</Step>
+
+<Step title="Configure a provider">
+Continue to [provider setup](/docs/provider-setup) and choose a model.
+</Step>
+
+## Example
+
+```swift
+// Package.swift
+dependencies: [
+    .package(
+        url: "https://github.com/Kartikayy007/SwiftyAI.git",
+        branch: "development"
+    )
+]
+```
+
+```swift
+import Swifty_AI
+
+let model = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-4o-mini"
+)
+```
+
+## API notes
+
+Use branch based dependencies while the SDK is moving quickly. Pin a version tag once releases are cut.
+
+## Related docs
+
+<Related>
+Next read [provider setup](/docs/provider-setup), [quickstart](/docs/quickstart), and [providers](/docs/providers).
+</Related>

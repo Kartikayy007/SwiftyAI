@@ -1,0 +1,66 @@
+# SwiftyAI
+
+SwiftyAI is a Swift SDK for building text generation, streaming, tools, retrieval, provider routing, Swift app state, MCP clients, and observability on top of multiple AI providers.
+
+## What it does
+
+SwiftyAI gives Swift developers one consistent surface for common AI product work. You can generate text, stream responses, call tools, create structured objects, embed documents, rerank search results, observe calls, and connect discovered MCP tools.
+
+## Why it matters
+
+Provider APIs are different enough that small prototypes turn into provider glue quickly. SwiftyAI keeps your application code focused on product behavior while the SDK handles model protocols, request options, streaming chunks, tool loops, and provider specific encoding.
+
+<Callout title="SDK first">
+The SDK ships APIs and state primitives. It does not require adopting prebuilt app screens.
+</Callout>
+
+## Before you start
+
+1. Add SwiftyAI to a Swift package or Xcode project.
+
+2. Configure at least one provider key.
+
+3. Pick either direct model instances or the [provider registry](/docs/provider-registry).
+
+## Steps
+
+<Step title="Install the SDK">
+Start with [installation](/docs/installation), then configure your first provider in [provider setup](/docs/provider-setup).
+</Step>
+
+<Step title="Generate your first response">
+Use [generate text](/docs/generate-text) for simple one shot calls or [stream text](/docs/stream-text) when you need incremental output.
+</Step>
+
+<Step title="Add richer capabilities">
+Layer in [tools](/docs/tools), [embeddings](/docs/embeddings), [reranking](/docs/reranking), [MCP](/docs/mcp), and [telemetry](/docs/telemetry) as your product needs them.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let model = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-4o-mini"
+)
+
+let response = try await generateText(
+    model: model,
+    prompt: "Explain actors in Swift in three sentences."
+)
+
+print(response.text)
+```
+
+## API notes
+
+The main entry points are [generateText](/docs/generate-text), [streamText](/docs/stream-text), [generateObject](/docs/generate-object), [tools](/docs/tools), [embeddings](/docs/embeddings), [reranking](/docs/reranking), [SwiftUI hooks](/docs/swiftui-hooks), [MCP](/docs/mcp), and [telemetry](/docs/telemetry).
+
+## Related docs
+
+<Related>
+Start with [quickstart](/docs/quickstart), then read [generation options](/docs/generation-options), [provider registry](/docs/provider-registry), and [streaming utilities](/docs/streaming-utilities).
+</Related>

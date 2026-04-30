@@ -1,0 +1,65 @@
+# Provider Registry
+
+The provider registry resolves model strings into concrete model instances.
+
+## What it does
+
+Use `createProviderRegistry` and `customProvider` to centralize provider setup, model lookup, and modality specific resolution.
+
+## Why it matters
+
+Registry strings keep application features portable. A feature can ask for `"openai/gpt-4o-mini"` or `"gemini/gemini-2.5-flash"` without constructing providers at every call site.
+
+## Before you start
+
+1. Configure the providers your app supports.
+
+2. Decide which models are available for text, streaming, tools, embeddings, reranking, and media.
+
+3. Keep the global registry separate from test registries.
+
+## Steps
+
+<Step title="Create a registry">
+Build one registry during app setup.
+</Step>
+
+<Step title="Register providers">
+Add built in provider factories and custom providers.
+</Step>
+
+<Step title="Resolve by capability">
+Use the text, stream, embedding, image, or rerank resolver that matches the feature.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let registry = createProviderRegistry {
+    customProvider("docs") { modelID in
+        OpenAICompatibleProvider(
+            baseURL: "https://api.openai.com/v1",
+            apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+            model: modelID
+        )
+    }
+}
+
+let response = try await generateText(
+    registry: registry,
+    model: "docs/gpt-4o-mini",
+    prompt: "Write a release note for provider registry support."
+)
+```
+
+## API notes
+
+Use direct providers for isolated examples and registry strings for larger apps with routing, user settings, or multiple providers.
+
+## Related docs
+
+<Related>
+Read [providers](/docs/providers), [custom providers](/docs/custom-providers), and [provider setup](/docs/provider-setup).
+</Related>

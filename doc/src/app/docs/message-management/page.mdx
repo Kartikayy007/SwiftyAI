@@ -1,0 +1,61 @@
+# Message Management
+
+Message management helpers keep conversation history valid and within context limits.
+
+## What it does
+
+The SDK can validate UI messages, convert UI messages to model messages, prune older history, and truncate context with strategies.
+
+## Why it matters
+
+Long chats eventually exceed model context windows. Good pruning preserves the most important messages without breaking role order.
+
+## Before you start
+
+1. Decide which messages must be preserved.
+
+2. Keep system prompts stable.
+
+3. Test edge cases with tiny limits.
+
+## Steps
+
+<Step title="Validate messages">
+Check role order and required content before sending.
+</Step>
+
+<Step title="Prune history">
+Preserve system instructions and the latest user request.
+</Step>
+
+<Step title="Convert for providers">
+Convert app messages into model messages before generation.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let messages: [ChatMessage] = [
+    .system("You are concise."),
+    .user("Explain tool calling."),
+    .assistant("Tool calling lets models request functions."),
+    .user("Show the short version.")
+]
+
+let pruned = pruneMessages(messages, maxMessages: 3)
+let valid = validateUIMessages(pruned)
+
+print(valid)
+```
+
+## API notes
+
+Use [AIChat](/docs/ai-chat) when you want state management around message history and streaming.
+
+## Related docs
+
+<Related>
+Read [AIChat](/docs/ai-chat), [stream text](/docs/stream-text), and [utilities](/docs/utilities).
+</Related>

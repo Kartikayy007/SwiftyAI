@@ -1,0 +1,67 @@
+# Reranking
+
+Reranking reorders candidate documents using a model that scores relevance against a query.
+
+## What it does
+
+Use `rerank` after search or vector retrieval to move the most useful documents to the top.
+
+## Why it matters
+
+Embedding search is fast, but the highest cosine score is not always the best context. Reranking improves quality before you send context into generation.
+
+## Before you start
+
+1. Collect candidate documents from search.
+
+2. Keep document IDs and metadata attached.
+
+3. Choose a rerank provider such as Cohere or a custom reranker.
+
+## Steps
+
+<Step title="Retrieve candidates">
+Use [embeddings](/docs/embeddings), keyword search, or your database.
+</Step>
+
+<Step title="Rerank the short list">
+Pass the query and candidate documents to `rerank`.
+</Step>
+
+<Step title="Send top context to generation">
+Use the best documents with [generate text](/docs/generate-text) or [stream text](/docs/stream-text).
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let reranker = CohereRerankProvider(
+    apiKey: ProcessInfo.processInfo.environment["COHERE_API_KEY"]!,
+    model: "rerank-v3.5"
+)
+
+let results = try await rerank(
+    model: reranker,
+    query: "How do I cancel a stream?",
+    documents: [
+        "Call stop on AIChat to cancel the internal task.",
+        "Use generateObject for typed structured output.",
+        "Use cosine similarity to compare embedding vectors."
+    ],
+    topK: 2
+)
+
+print(results)
+```
+
+## API notes
+
+Custom rerankers can conform to the SDK protocol when you already have an internal relevance service.
+
+## Related docs
+
+<Related>
+Read [embeddings](/docs/embeddings), [retrieval](/docs/retrieval), and [telemetry](/docs/telemetry).
+</Related>

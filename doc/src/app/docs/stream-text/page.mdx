@@ -1,0 +1,70 @@
+# Stream Text
+
+`streamText` returns chunks as the model generates them.
+
+## What it does
+
+Streaming lets you update logs, command line output, SwiftUI state, or an app level transcript while the provider is still responding.
+
+## Why it matters
+
+Long model calls feel faster when the first token appears quickly. Streaming also unlocks progress events and richer tool flows through [agent UI stream](/docs/agent-ui-stream).
+
+## Before you start
+
+1. Use a model that conforms to the streaming protocol.
+
+2. Handle thrown errors around the async sequence.
+
+3. Decide whether to collect chunks into a final string.
+
+## Steps
+
+<Step title="Create the stream">
+Call `streamText` with a model, prompt, and optional callbacks.
+</Step>
+
+<Step title="Consume chunks">
+Loop with `for try await` and render non empty `chunk.text`.
+</Step>
+
+<Step title="Record completion">
+Use `onFinish` when you need one final `AIResponse`.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let model = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-4o-mini"
+)
+
+var finalText = ""
+
+for try await chunk in streamText(
+    model: model,
+    prompt: "Write a concise release note for embeddings support.",
+    onChunk: { chunk in
+        print(chunk.text, terminator: "")
+    },
+    onFinish: { response in
+        print("\nFinished with \(response.finishReason ?? "unknown")")
+    }
+) {
+    finalText += chunk.text
+}
+```
+
+## API notes
+
+Streams can include final usage information when providers expose it. Use [streaming utilities](/docs/streaming-utilities) to smooth or simulate streams.
+
+## Related docs
+
+<Related>
+Read [SwiftUI hooks](/docs/swiftui-hooks), [AIChat](/docs/ai-chat), [agent UI stream](/docs/agent-ui-stream), and [telemetry](/docs/telemetry).
+</Related>

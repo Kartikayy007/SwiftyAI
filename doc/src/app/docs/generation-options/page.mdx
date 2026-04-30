@@ -1,0 +1,63 @@
+# Generation Options
+
+`GenerationOptions` controls request behavior across text generation, streaming, and tool loops.
+
+## What it does
+
+Options let you set system behavior, randomness, length, stopping rules, penalties, callbacks, prompt caching, and telemetry where supported.
+
+## Why it matters
+
+Production AI features need predictable knobs. A system prompt shapes behavior, max tokens prevents runaway output, and callbacks connect model events to your app.
+
+## Before you start
+
+1. Check which options your provider supports.
+
+2. Keep defaults simple until product behavior requires tuning.
+
+3. Prefer low temperature for deterministic workflows.
+
+## Steps
+
+<Step title="Start with a system prompt">
+Use `system` to describe the assistant role or business constraints.
+</Step>
+
+<Step title="Tune generation">
+Use `temperature`, `topP`, `maxTokens`, penalties, and stop sequences.
+</Step>
+
+<Step title="Attach callbacks">
+Use `onChunk` and `onFinish` for streaming side effects.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let options = GenerationOptions(
+    system: "You are a concise Swift SDK documentation assistant.",
+    temperature: 0.2,
+    topP: 0.9,
+    maxTokens: 400,
+    stopSequences: ["END"]
+)
+
+let response = try await generateText(
+    model: model,
+    prompt: "Explain when to use streamText.",
+    options: options
+)
+```
+
+## API notes
+
+Some providers ignore unsupported options. OpenAI compatible models do not use `topK`, while Anthropic and Gemini expose different system prompt shapes behind the SDK.
+
+## Related docs
+
+<Related>
+Read [generate text](/docs/generate-text), [stream text](/docs/stream-text), and [telemetry](/docs/telemetry).
+</Related>

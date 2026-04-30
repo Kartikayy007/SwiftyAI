@@ -1,0 +1,70 @@
+# Agent UI Stream
+
+Agent UI Stream exposes typed events for model progress, tool calls, tool results, failures, and completion.
+
+## What it does
+
+`createAgentUIStream` turns a tool loop into an async stream of `AgentEvent` values that application code can render or log.
+
+## Why it matters
+
+Agent behavior is easier to trust when users can see what is happening. Typed events also make debugging and testing tool flows clearer.
+
+## Before you start
+
+1. Build a working [tool calling](/docs/tool-calling) flow.
+
+2. Decide where progress events should be rendered or recorded.
+
+3. Handle `.failed` events and thrown stream errors.
+
+## Steps
+
+<Step title="Create the event stream">
+Pass the model, prompt, tools, and options to `createAgentUIStream`.
+</Step>
+
+<Step title="Switch over events">
+Handle started, model chunks, tool call started, tool call finished, step finished, failed, and finished.
+</Step>
+
+<Step title="Keep UI separate">
+Render the stream in your own app. The SDK does not ship visual components.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let events = createAgentUIStream(
+    model: model,
+    prompt: "Check inventory and recommend the best replacement.",
+    tools: [inventoryTool, recommendationTool]
+)
+
+for try await event in events {
+    switch event {
+    case .modelChunk(let chunk):
+        print(chunk.text, terminator: "")
+    case .toolCallStarted(let call):
+        print("Calling \(call.name)")
+    case .toolCallFinished(let result):
+        print("Tool finished: \(result.name)")
+    case .failed(let error):
+        print("Agent failed: \(error)")
+    default:
+        break
+    }
+}
+```
+
+## API notes
+
+Failure behavior yields `.failed(error)` before the async stream throws the same error, so renderers can show failure state and still keep throwing semantics.
+
+## Related docs
+
+<Related>
+Read [tools](/docs/tools), [tool calling](/docs/tool-calling), and [SwiftUI hooks](/docs/swiftui-hooks).
+</Related>
