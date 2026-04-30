@@ -4,7 +4,7 @@ import Foundation
 import FoundationModels
 
 @available(iOS 26, macOS 26, *)
-public struct AppleFoundationProvider: AIModel, AIStreamModel {
+public struct AppleFoundationProvider: AIModel, AIStreamModel, AIToolCallingModel {
     private let session: LanguageModelSession
 
     public init() {

@@ -16,5 +16,10 @@ let package = Package(
             path: "Swifty AI",
             exclude: ["Swifty_AI.docc"]
         ),
+        .testTarget(
+            name: "SwiftyAIPackageTests",
+            dependencies: ["SwiftyAI"],
+            path: "SwiftyPMTests"
+        ),
     ]
 )

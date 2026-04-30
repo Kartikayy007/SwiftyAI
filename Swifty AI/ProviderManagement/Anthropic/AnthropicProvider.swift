@@ -1,6 +1,6 @@
 import Foundation
 
-public struct AnthropicProvider: AIModel, AIStreamModel {
+public struct AnthropicProvider: AIModel, AIStreamModel, AIToolCallingModel {
     private let apiKey: String
     private let model: String
     let session: URLSession
@@ -16,6 +16,10 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
     }
 
     public func generate(_ prompt: String, options: GenerationOptions) async throws -> AIResponse {
+        try await generate([.text(prompt)], options: options)
+    }
+
+    public func generate(_ prompt: [AIMessageContent], options: GenerationOptions) async throws -> AIResponse {
         let url = URL(string: "https://api.anthropic.com/v1/messages")!
         let headers = [
             "x-api-key": apiKey,
@@ -24,7 +28,7 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
         let body = Request(
             model: model,
             maxTokens: options.maxTokens ?? 1024,
-            messages: [.init(role: "user", content: prompt)],
+            messages: [.init(role: "user", content: try Request.ContentBlock.blocks(from: prompt))],
             system: options.system,
             stream: false,
             temperature: options.temperature,
@@ -33,7 +37,7 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
             stopSequences: options.stopSequences
         )
 
-        let data = try await httpPost(url: url, headers: headers, body: body, session: session)
+        let data = try await httpPost(url: url, headers: headers, body: body, session: session, options: options)
 
         do {
             let decoded = try JSONDecoder().decode(Response.self, from: data)
@@ -58,9 +62,14 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
 
     public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
         let system = messages.first(where: { $0.role == .system })?.content
-        let convo = messages
-            .filter { $0.role != .system }
-            .map { Request.Message(role: $0.role.rawValue, content: $0.content) }
+        let convo: [Request.Message]
+        do {
+            convo = try messages
+                .filter { $0.role != .system }
+                .map { try Request.Message(role: $0.role.rawValue, content: Request.ContentBlock.blocks(from: $0.parts)) }
+        } catch {
+            return AsyncThrowingStream { $0.finish(throwing: error) }
+        }
         return streamSSE(messages: convo, system: system, options: GenerationOptions())
     }
 
@@ -69,7 +78,19 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
     }
 
     public func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        streamSSE(messages: [.init(role: "user", content: prompt)], system: options.system, options: options)
+        stream([.text(prompt)], options: options)
+    }
+
+    public func stream(_ prompt: [AIMessageContent], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        do {
+            return streamSSE(
+                messages: [.init(role: "user", content: try Request.ContentBlock.blocks(from: prompt))],
+                system: options.system,
+                options: options
+            )
+        } catch {
+            return AsyncThrowingStream { $0.finish(throwing: error) }
+        }
     }
 
     private func streamSSE(messages: [Request.Message], system: String?, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
@@ -103,7 +124,7 @@ public struct AnthropicProvider: AIModel, AIStreamModel {
                 var outputTokens: Int?
 
                 do {
-                    for try await jsonString in sseLines(request: request, session: session) {
+                    for try await jsonString in sseLines(request: request, session: session, options: options) {
                         if Task.isCancelled {
                             continuation.finish()
                             return
@@ -170,7 +191,72 @@ private extension AnthropicProvider {
 
         struct Message: Encodable {
             let role: String
-            let content: String
+            let content: [ContentBlock]
+        }
+
+        struct ContentBlock: Encodable {
+            let type: String
+            let text: String?
+            let source: Source?
+
+            static func blocks(from parts: [AIMessageContent]) throws -> [ContentBlock] {
+                try parts.map(ContentBlock.init(content:))
+            }
+
+            init(content: AIMessageContent) throws {
+                switch content {
+                case .text(let text):
+                    self.type = "text"
+                    self.text = text
+                    self.source = nil
+                case .imageURL(let url, _):
+                    self.type = "image"
+                    self.text = nil
+                    self.source = .url(url.absoluteString)
+                case .imageBase64, .imageData:
+                    guard let mediaType = content.mediaType, let data = content.rawBase64 else {
+                        throw AIError.invalidResponse
+                    }
+                    self.type = "image"
+                    self.text = nil
+                    self.source = .base64(mediaType: mediaType.rawValue, data: data)
+                case .pdfURL(let url, _):
+                    self.type = "document"
+                    self.text = nil
+                    self.source = .url(url.absoluteString)
+                case .pdfBase64, .pdfData:
+                    guard let data = content.rawBase64 else { throw AIError.invalidResponse }
+                    self.type = "document"
+                    self.text = nil
+                    self.source = .base64(mediaType: AIMediaType.pdf.rawValue, data: data)
+                default:
+                    throw AIError.unsupportedFeature("Anthropic multimodal requests support text, images, and PDFs in this SDK")
+                }
+            }
+
+            enum CodingKeys: String, CodingKey {
+                case type, text, source
+            }
+
+            struct Source: Encodable {
+                let type: String
+                let url: String?
+                let mediaType: String?
+                let data: String?
+
+                enum CodingKeys: String, CodingKey {
+                    case type, url, data
+                    case mediaType = "media_type"
+                }
+
+                static func url(_ url: String) -> Source {
+                    Source(type: "url", url: url, mediaType: nil, data: nil)
+                }
+
+                static func base64(mediaType: String, data: String) -> Source {
+                    Source(type: "base64", url: nil, mediaType: mediaType, data: data)
+                }
+            }
         }
     }
 
