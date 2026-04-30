@@ -92,6 +92,67 @@ do {
 
 ---
 
+## ProviderRegistry (Custom Providers)
+
+Use ``ProviderRegistry`` when you need explicit custom provider resolution for mocks,
+local models, or proprietary backends. Custom registries are separate from
+``AI/configure(_:)`` and do not modify global string resolution.
+
+```swift
+struct LocalModel: AIModel {
+    func generate(_ prompt: String) async throws -> AIResponse {
+        AIResponse(text: "local: \(prompt)", model: "local-chat")
+    }
+}
+
+let registry = createProviderRegistry([
+    "local": customProvider(
+        languageModels: ["chat": LocalModel()]
+    )
+])
+
+let response = try await generateText(
+    model: "local/chat",
+    registry: registry,
+    prompt: "Hello"
+)
+```
+
+Register models by modality:
+
+```swift
+let registry = createProviderRegistry([
+    "mock": customProvider(
+        languageModels: ["chat": chatModel],
+        streamModels: ["stream": streamingModel],
+        toolCallingModels: ["tools": toolModel],
+        imageModels: ["image": imageModel],
+        transcriptionModels: ["transcribe": transcriptionModel],
+        speechModels: ["speech": speechModel],
+        videoModels: ["video": videoModel],
+        embeddingModels: ["embed": embeddingModel],
+        rerankModels: ["rerank": rerankModel]
+    )
+])
+```
+
+Resolve strings directly when you want to pass the model yourself:
+
+```swift
+let model = try registry.streamModel("mock/stream")
+for try await chunk in streamText(model: model, prompt: "Stream this") {
+    print(chunk.text, terminator: "")
+}
+```
+
+Custom registry strings use the same `"provider/model-name"` format as
+``AI/configure(_:)``. Provider ids are matched exactly against the keys passed to
+``createProviderRegistry(_:)``. Unknown providers throw
+``AIError/providerNotConfigured(_:)``; missing models or wrong modality lookups
+throw ``AIError/unsupportedFeature(_:)``.
+
+---
+
 ## Core Types
 
 ### AIModel
@@ -1354,6 +1415,9 @@ print(response.text)
 
 - ``AI``
 - ``AIConfiguration``
+- ``ProviderRegistry``
+- ``createProviderRegistry(_:)``
+- ``customProvider(languageModels:streamModels:toolCallingModels:imageModels:transcriptionModels:speechModels:videoModels:embeddingModels:rerankModels:)``
 
 ### Core
 
