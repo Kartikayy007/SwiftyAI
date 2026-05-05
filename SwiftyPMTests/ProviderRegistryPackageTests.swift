@@ -13,9 +13,7 @@ final class ProviderRegistryPackageTests: XCTestCase {
                 imageModels: ["image": model],
                 transcriptionModels: ["transcription": model],
                 speechModels: ["speech": model],
-                videoModels: ["video": model],
-                embeddingModels: ["embedding": model],
-                rerankModels: ["rerank": model]
+                videoModels: ["video": model]
             )
         ])
 
@@ -27,8 +25,6 @@ final class ProviderRegistryPackageTests: XCTestCase {
         XCTAssertNoThrow(try registry.transcriptionModel("mock/transcription"))
         XCTAssertNoThrow(try registry.speechModel("mock/speech"))
         XCTAssertNoThrow(try registry.videoModel("mock/video"))
-        XCTAssertNoThrow(try registry.embeddingModel("mock/embedding"))
-        XCTAssertNoThrow(try registry.rerankModel("mock/rerank"))
 
         let text = try await generateText(model: "mock/text", registry: registry, prompt: "Hello")
         XCTAssertEqual(text.text, "package:Hello")
@@ -54,16 +50,10 @@ final class ProviderRegistryPackageTests: XCTestCase {
 
         let video = try await generateVideo(model: "mock/video", registry: registry, prompt: "Animate")
         XCTAssertEqual(video.id, "package")
-
-        let embedding = try await embed(model: "mock/embedding", registry: registry, input: "Embed")
-        XCTAssertEqual(embedding.model, "package")
-
-        let reranked = try await rerank(model: "mock/rerank", registry: registry, query: "swift", documents: ["Swift"])
-        XCTAssertEqual(reranked.id, "package")
     }
 }
 
-private final class PackageRegistryModel: AIToolCallingModel, AIImageModel, AITranscriptionModel, AISpeechModel, AIVideoModel, AIEmbeddingModel, AIRerankModel, @unchecked Sendable {
+private final class PackageRegistryModel: AIToolCallingModel, AIImageModel, AITranscriptionModel, AISpeechModel, AIVideoModel, @unchecked Sendable {
     private let id: String
 
     init(_ id: String) {
@@ -103,19 +93,5 @@ private final class PackageRegistryModel: AIToolCallingModel, AIImageModel, AITr
 
     func generateVideo(prompt: String, options: VideoGenerationOptions) async throws -> VideoResponse {
         VideoResponse(id: id, data: Data(id.utf8), model: id)
-    }
-
-    func embed(_ input: String, options: EmbeddingOptions) async throws -> EmbeddingResponse {
-        EmbeddingResponse(embeddings: [[1, 0]], model: id)
-    }
-
-    func embedMany(_ inputs: [String], options: EmbeddingOptions) async throws -> EmbeddingResponse {
-        EmbeddingResponse(embeddings: inputs.map { _ in [1, 0] }, model: id)
-    }
-
-    func rerank(query: String, documents: [RerankDocument], options: RerankOptions) async throws -> RerankResponse {
-        RerankResponse(id: id, model: id, results: [
-            RerankResult(index: 0, relevanceScore: 1, document: documents.first)
-        ])
     }
 }

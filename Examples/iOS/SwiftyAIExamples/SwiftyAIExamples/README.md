@@ -20,7 +20,6 @@ This app is a runnable gallery of SwiftyAI capabilities, similar in spirit to th
 - `SwiftyChat`: stateful streaming chat.
 - `AIChat Hook`: SwiftUI hook state for chat input, messages, loading, errors, and cancellation.
 - `AICompletion Hook`: SwiftUI hook state for prompt, output, loading, errors, and cancellation.
-- `Embeddings`: OpenAI or Gemini embeddings with cosine similarity ranking.
 - `generateWithTools`: typed and dynamic Swift tools with step timeline.
 - `streamWithTools`: live agent events for text, tool calls, tool results, telemetry, interception, approval hooks, and parallel calls.
 - `GenerationOptions`: temperature, token limit, retry, stop sequences, and prompt caching.

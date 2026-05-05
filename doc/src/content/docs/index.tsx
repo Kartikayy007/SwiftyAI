@@ -25,8 +25,6 @@ export const docsBySlug = {
   "stream-text": doc("Stream Text"),
   tools: doc("Tools"),
   "generate-object": doc("Generate Object"),
-  embeddings: doc("Embeddings"),
-  reranking: doc("Reranking"),
   "provider-registry": doc("Provider Registry"),
   "swiftui-hooks": doc("SwiftUI Hooks"),
   mcp: doc("MCP"),

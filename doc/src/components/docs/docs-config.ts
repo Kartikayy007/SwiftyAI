@@ -1,14 +1,12 @@
 import {
   AudioLines,
   Boxes,
-  BrainCircuit,
   Braces,
   Cable,
   Clapperboard,
   Cpu,
   FileText,
   Gauge,
-  GitBranch,
   Image,
   KeyRound,
   Layers,
@@ -18,7 +16,6 @@ import {
   Radio,
   Route,
   Rows3,
-  ScanSearch,
   Sparkles,
   SquareFunction,
   TextCursorInput,
@@ -50,14 +47,6 @@ export const docsNavGroups = [
       { title: "Tools", href: "/docs/tools", icon: Wrench },
       { title: "Tool Calling", href: "/docs/tool-calling", icon: Cable },
       { title: "Agent UI Stream", href: "/docs/agent-ui-stream", icon: Rows3 },
-    ],
-  },
-  {
-    title: "Retrieval",
-    items: [
-      { title: "Embeddings", href: "/docs/embeddings", icon: BrainCircuit },
-      { title: "Reranking", href: "/docs/reranking", icon: GitBranch },
-      { title: "Retrieval", href: "/docs/retrieval", icon: ScanSearch },
     ],
   },
   {

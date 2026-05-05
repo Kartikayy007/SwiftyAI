@@ -47,7 +47,7 @@ var finalText = ""
 
 for try await chunk in streamText(
     model: model,
-    prompt: "Write a concise release note for embeddings support.",
+    prompt: "Write a concise release note for streaming support.",
     onChunk: { chunk in
         print(chunk.text, terminator: "")
     },

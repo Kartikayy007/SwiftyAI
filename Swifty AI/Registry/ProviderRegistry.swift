@@ -12,8 +12,6 @@ public struct ProviderRegistry: Sendable {
         fileprivate let transcriptionModels: [String: any AITranscriptionModel]
         fileprivate let speechModels: [String: any AISpeechModel]
         fileprivate let videoModels: [String: any AIVideoModel]
-        fileprivate let embeddingModels: [String: any AIEmbeddingModel]
-        fileprivate let rerankModels: [String: any AIRerankModel]
 
         /// Creates a custom provider from modality-specific model maps.
         public init(
@@ -23,9 +21,7 @@ public struct ProviderRegistry: Sendable {
             imageModels: [String: any AIImageModel] = [:],
             transcriptionModels: [String: any AITranscriptionModel] = [:],
             speechModels: [String: any AISpeechModel] = [:],
-            videoModels: [String: any AIVideoModel] = [:],
-            embeddingModels: [String: any AIEmbeddingModel] = [:],
-            rerankModels: [String: any AIRerankModel] = [:]
+            videoModels: [String: any AIVideoModel] = [:]
         ) {
             self.languageModels = languageModels
             self.streamModels = streamModels
@@ -34,8 +30,6 @@ public struct ProviderRegistry: Sendable {
             self.transcriptionModels = transcriptionModels
             self.speechModels = speechModels
             self.videoModels = videoModels
-            self.embeddingModels = embeddingModels
-            self.rerankModels = rerankModels
         }
     }
 
@@ -120,20 +114,6 @@ public struct ProviderRegistry: Sendable {
         }
     }
 
-    /// Resolves an `AIEmbeddingModel` string such as `"mock/embed"`.
-    public func embeddingModel(_ modelString: String) throws -> any AIEmbeddingModel {
-        try resolve(modelString, modality: "embedding model") { provider, model in
-            provider.embeddingModels[model]
-        }
-    }
-
-    /// Resolves an `AIRerankModel` string such as `"mock/rerank"`.
-    public func rerankModel(_ modelString: String) throws -> any AIRerankModel {
-        try resolve(modelString, modality: "rerank model") { provider, model in
-            provider.rerankModels[model]
-        }
-    }
-
     private func resolve<Model>(
         _ modelString: String,
         modality: String,
@@ -173,9 +153,7 @@ public func customProvider(
     imageModels: [String: any AIImageModel] = [:],
     transcriptionModels: [String: any AITranscriptionModel] = [:],
     speechModels: [String: any AISpeechModel] = [:],
-    videoModels: [String: any AIVideoModel] = [:],
-    embeddingModels: [String: any AIEmbeddingModel] = [:],
-    rerankModels: [String: any AIRerankModel] = [:]
+    videoModels: [String: any AIVideoModel] = [:]
 ) -> ProviderRegistry.Provider {
     ProviderRegistry.Provider(
         languageModels: languageModels,
@@ -184,9 +162,7 @@ public func customProvider(
         imageModels: imageModels,
         transcriptionModels: transcriptionModels,
         speechModels: speechModels,
-        videoModels: videoModels,
-        embeddingModels: embeddingModels,
-        rerankModels: rerankModels
+        videoModels: videoModels
     )
 }
 
@@ -369,46 +345,4 @@ public func generateVideo(
 ) async throws -> VideoResponse {
     let resolved = try registry.videoModel(model)
     return try await generateVideo(model: resolved, prompt: prompt, options: options)
-}
-
-public func embed(
-    model: String,
-    registry: ProviderRegistry,
-    input: String,
-    options: EmbeddingOptions = EmbeddingOptions()
-) async throws -> EmbeddingResponse {
-    let resolved = try registry.embeddingModel(model)
-    return try await embed(model: resolved, input: input, options: options)
-}
-
-public func embedMany(
-    model: String,
-    registry: ProviderRegistry,
-    inputs: [String],
-    options: EmbeddingOptions = EmbeddingOptions()
-) async throws -> EmbeddingResponse {
-    let resolved = try registry.embeddingModel(model)
-    return try await embedMany(model: resolved, inputs: inputs, options: options)
-}
-
-public func rerank(
-    model: String,
-    registry: ProviderRegistry,
-    query: String,
-    documents: [RerankDocument],
-    options: RerankOptions = RerankOptions()
-) async throws -> RerankResponse {
-    let resolved = try registry.rerankModel(model)
-    return try await rerank(model: resolved, query: query, documents: documents, options: options)
-}
-
-public func rerank(
-    model: String,
-    registry: ProviderRegistry,
-    query: String,
-    documents: [String],
-    options: RerankOptions = RerankOptions()
-) async throws -> RerankResponse {
-    let resolved = try registry.rerankModel(model)
-    return try await rerank(model: resolved, query: query, documents: documents, options: options)
 }
