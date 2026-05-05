@@ -11,8 +11,6 @@ final class ProviderRegistryTests: XCTestCase {
         let transcription = RegistryMockModel("transcription")
         let speech = RegistryMockModel("speech")
         let video = RegistryMockModel("video")
-        let embedding = RegistryMockModel("embedding")
-        let rerank = RegistryMockModel("rerank")
 
         let registry = createProviderRegistry([
             "mock": customProvider(
@@ -22,9 +20,7 @@ final class ProviderRegistryTests: XCTestCase {
                 imageModels: ["image": image],
                 transcriptionModels: ["transcription": transcription],
                 speechModels: ["speech": speech],
-                videoModels: ["video": video],
-                embeddingModels: ["embedding": embedding],
-                rerankModels: ["rerank": rerank]
+                videoModels: ["video": video]
             )
         ])
 
@@ -39,8 +35,6 @@ final class ProviderRegistryTests: XCTestCase {
         XCTAssertTrue((try registry.transcriptionModel("mock/transcription") as? RegistryMockModel) === transcription)
         XCTAssertTrue((try registry.speechModel("mock/speech") as? RegistryMockModel) === speech)
         XCTAssertTrue((try registry.videoModel("mock/video") as? RegistryMockModel) === video)
-        XCTAssertTrue((try registry.embeddingModel("mock/embedding") as? RegistryMockModel) === embedding)
-        XCTAssertTrue((try registry.rerankModel("mock/rerank") as? RegistryMockModel) === rerank)
     }
 
     func testRegistryAwareGenerationAPIsResolveCustomModelStrings() async throws {
@@ -53,9 +47,7 @@ final class ProviderRegistryTests: XCTestCase {
                 imageModels: ["image": model],
                 transcriptionModels: ["transcription": model],
                 speechModels: ["speech": model],
-                videoModels: ["video": model],
-                embeddingModels: ["embedding": model],
-                rerankModels: ["rerank": model]
+                videoModels: ["video": model]
             )
         ])
 
@@ -86,12 +78,6 @@ final class ProviderRegistryTests: XCTestCase {
 
         let video = try await generateVideo(model: "mock/video", registry: registry, prompt: "Animate")
         XCTAssertEqual(video.id, "custom")
-
-        let embedding = try await embed(model: "mock/embedding", registry: registry, input: "Embed")
-        XCTAssertEqual(embedding.model, "custom")
-
-        let reranked = try await rerank(model: "mock/rerank", registry: registry, query: "swift", documents: ["Swift"])
-        XCTAssertEqual(reranked.id, "custom")
     }
 
     func testUnknownProviderThrowsProviderNotConfigured() throws {
@@ -159,7 +145,7 @@ final class ProviderRegistryTests: XCTestCase {
     }
 }
 
-private final class RegistryMockModel: AIToolCallingModel, AIImageModel, AITranscriptionModel, AISpeechModel, AIVideoModel, AIEmbeddingModel, AIRerankModel, @unchecked Sendable {
+private final class RegistryMockModel: AIToolCallingModel, AIImageModel, AITranscriptionModel, AISpeechModel, AIVideoModel, @unchecked Sendable {
     private let id: String
 
     init(_ id: String) {
@@ -202,19 +188,5 @@ private final class RegistryMockModel: AIToolCallingModel, AIImageModel, AITrans
 
     func generateVideo(prompt: String, options: VideoGenerationOptions) async throws -> VideoResponse {
         VideoResponse(id: id, data: Data(id.utf8), model: id)
-    }
-
-    func embed(_ input: String, options: EmbeddingOptions) async throws -> EmbeddingResponse {
-        EmbeddingResponse(embeddings: [[1, 0]], model: id)
-    }
-
-    func embedMany(_ inputs: [String], options: EmbeddingOptions) async throws -> EmbeddingResponse {
-        EmbeddingResponse(embeddings: inputs.map { _ in [1, 0] }, model: id)
-    }
-
-    func rerank(query: String, documents: [RerankDocument], options: RerankOptions) async throws -> RerankResponse {
-        RerankResponse(id: id, model: id, results: [
-            RerankResult(index: 0, relevanceScore: 1, document: documents.first)
-        ])
     }
 }

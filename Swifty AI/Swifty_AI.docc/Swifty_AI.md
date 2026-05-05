@@ -129,9 +129,7 @@ let registry = createProviderRegistry([
         imageModels: ["image": imageModel],
         transcriptionModels: ["transcribe": transcriptionModel],
         speechModels: ["speech": speechModel],
-        videoModels: ["video": videoModel],
-        embeddingModels: ["embed": embeddingModel],
-        rerankModels: ["rerank": rerankModel]
+        videoModels: ["video": videoModel]
     )
 ])
 ```
@@ -479,113 +477,6 @@ print("Tokens used:", response.usage?.outputTokens ?? 0)
 
 ---
 
-## Embeddings
-
-Use embeddings to turn text into vectors for search, clustering, classification, and similarity scoring. SwiftyAI supports OpenAI-compatible embedding endpoints and Gemini's embedding API through the same feature-level API.
-
-### embed
-
-Generate one embedding vector:
-
-```swift
-let response = try await embed(
-    model: "openai/text-embedding-3-small",
-    input: "Swift actors protect mutable state.",
-    options: EmbeddingOptions(dimensions: 512)
-)
-
-let vector = response.embedding ?? []
-print("Vector dimensions:", vector.count)
-print("Input tokens:", response.usage?.inputTokens ?? 0)
-```
-
-You can also pass a provider directly:
-
-```swift
-let model = OpenAICompatibleProvider(
-    baseURL: "https://api.openai.com/v1",
-    apiKey: "sk-...",
-    model: "text-embedding-3-small"
-)
-
-let response = try await embed(model: model, input: "Search query")
-```
-
-Gemini embedding models use the same call. Gemini-specific task hints can be passed in `EmbeddingOptions`:
-
-```swift
-let response = try await embed(
-    model: "gemini/gemini-embedding-001",
-    input: "How do Swift actors work?",
-    options: EmbeddingOptions(
-        dimensions: 768,
-        taskType: .retrievalQuery
-    )
-)
-```
-
-### embedMany
-
-Batch multiple strings in one provider request:
-
-```swift
-let docs = [
-    "Swift actors isolate mutable state.",
-    "Structured concurrency scopes child tasks.",
-    "Optionals represent values that may be absent."
-]
-
-let response = try await embedMany(
-    model: "openai/text-embedding-3-small",
-    inputs: docs,
-    options: EmbeddingOptions(dimensions: 512)
-)
-
-let vectors = response.embeddings
-```
-
-For Gemini retrieval documents, include the task type and an optional title:
-
-```swift
-let response = try await embedMany(
-    model: "gemini/gemini-embedding-001",
-    inputs: docs,
-    options: EmbeddingOptions(
-        taskType: .retrievalDocument,
-        title: "Swift notes"
-    )
-)
-```
-
-### cosineSimilarity
-
-Use `cosineSimilarity(_:_:)` to compare two vectors. It returns `0` for empty vectors, mismatched dimensions, or zero-magnitude vectors.
-
-```swift
-let query = try await embed(
-    model: "openai/text-embedding-3-small",
-    input: "How does Swift protect shared state?"
-)
-let documents = try await embedMany(
-    model: "openai/text-embedding-3-small",
-    inputs: docs
-)
-
-let queryVector = query.embedding ?? []
-let scores = documents.embeddings.map { cosineSimilarity(queryVector, $0) }
-```
-
-### Embedding provider support
-
-| API | OpenAI-compatible | Gemini | Anthropic and others |
-|---|---|---|---|
-| `embed` | `/embeddings` | `models.embedContent` | Not supported |
-| `embedMany` | `/embeddings` with array input | `models.batchEmbedContents` | Not supported |
-| `dimensions` | `dimensions` | `outputDimensionality` | Not supported |
-| `taskType` and `title` | Ignored | Sent to Gemini | Not supported |
-
----
-
 ## Multimodal Messages
 
 Use ``AIMessageContent`` when a prompt includes text plus images, PDFs, audio, video, or file attachments.
@@ -853,83 +744,6 @@ let video = try await generateVideo(
 | `generateVideo` | Sora Video API | Veo long-running operation | Not supported |
 
 OpenAI-compatible custom providers can call the same concrete provider type directly, but the remote service must actually implement the media endpoint.
-
----
-
-## Reranking
-
-Use reranking to score a small set of candidate documents against a query and return the most relevant matches. Reranking is independent from embeddings and vector stores: you provide the candidate documents, and the reranker returns ordered indexes and relevance scores.
-
-### Cohere rerank
-
-Configure Cohere once, then resolve a rerank model by string:
-
-```swift
-AI.configure {
-    $0.cohere(apiKey: ProcessInfo.processInfo.environment["COHERE_API_KEY"]!)
-}
-
-let response = try await rerank(
-    model: "cohere/rerank-v3.5",
-    query: "What is the vacation policy?",
-    documents: [
-        "Employees receive fifteen paid vacation days each year.",
-        "The office is closed on public holidays.",
-        "Expense reports are due by Friday."
-    ],
-    options: RerankOptions(topN: 2)
-)
-
-for result in response.results {
-    print(result.index, result.relevanceScore)
-}
-```
-
-You can also pass a Cohere rerank provider directly:
-
-```swift
-let model = AIRerankModel.cohere(apiKey: "...", model: "rerank-v3.5")
-
-let response = try await rerank(
-    model: model,
-    query: "capital of the United States",
-    documents: [
-        RerankDocument("Carson City is the capital of Nevada."),
-        RerankDocument("Washington, D.C. is the capital of the United States.")
-    ],
-    options: RerankOptions(topN: 1, returnDocuments: true)
-)
-
-let best = response.results.first
-print(best?.index ?? -1)
-print(best?.document?.text ?? "")
-```
-
-`RerankOptions.returnDocuments` asks providers that support it to include returned document text. Cohere supports this through its v1 rerank endpoint. `RerankDocument.metadata` is encoded as Cohere document object fields when present.
-
-### Custom rerankers
-
-Conform to ``AIRerankModel`` for mocks, local rerankers, or proprietary backends:
-
-```swift
-struct LocalReranker: AIRerankModel {
-    func rerank(
-        query: String,
-        documents: [RerankDocument],
-        options: RerankOptions
-    ) async throws -> RerankResponse {
-        let scored = documents.enumerated().map { index, document in
-            RerankResult(
-                index: index,
-                relevanceScore: document.text.localizedCaseInsensitiveContains(query) ? 1 : 0,
-                document: options.returnDocuments == true ? document : nil
-            )
-        }
-
-        return RerankResponse(results: Array(scored.prefix(options.topN ?? scored.count)))
-    }
-}
-```
 
 ---
 
@@ -1495,18 +1309,15 @@ print(response.text)
 - ``AIConfiguration``
 - ``ProviderRegistry``
 - ``createProviderRegistry(_:)``
-- ``customProvider(languageModels:streamModels:toolCallingModels:imageModels:transcriptionModels:speechModels:videoModels:embeddingModels:rerankModels:)``
+- ``customProvider(languageModels:streamModels:toolCallingModels:imageModels:transcriptionModels:speechModels:videoModels:)``
 
 ### Core
 
 - ``AIModel``
-- ``AIEmbeddingModel``
 - ``AIStreamModel``
 - ``AIResponse``
 - ``AIStreamChunk``
 - ``TokenUsage``
-- ``EmbeddingResponse``
-- ``EmbeddingUsage``
 - ``AIError``
 - ``AIMessageContent``
 - ``AIMediaType``
@@ -1543,22 +1354,11 @@ print(response.text)
 - ``createAgentUIStream(model:prompt:tools:options:maxSteps:stopWhen:onEvent:onStepFinish:onFinish:toolOptions:)``
 - ``generateObject(model:prompt:as:options:)``
 - ``streamObject(model:prompt:output:options:onPartial:onFinish:)``
-- ``embed(model:input:options:)``
-- ``embedMany(model:inputs:options:)``
-- ``cosineSimilarity(_:_:)``
 - ``generateImage(model:prompt:options:)``
-- ``rerank(model:query:documents:options:)``
 - ``transcribe(model:audio:options:)``
 - ``generateSpeech(model:text:options:)``
 - ``generateVideo(model:prompt:options:)``
 - ``GenerationOptions``
-- ``EmbeddingOptions``
-- ``EmbeddingTaskType``
-- ``RerankOptions``
-- ``RerankDocument``
-- ``RerankResult``
-- ``RerankResponse``
-- ``AIRerankModel``
 - ``ImageGenerationOptions``
 - ``ImageResponse``
 - ``GeneratedImage``
@@ -1618,7 +1418,6 @@ print(response.text)
 - ``OpenRouterProvider``
 - ``MistralProvider``
 - ``CohereProvider``
-- ``CohereRerankProvider``
 - ``CloudflareProvider``
 - ``OllamaProvider``
 - ``AppleFoundationProvider``

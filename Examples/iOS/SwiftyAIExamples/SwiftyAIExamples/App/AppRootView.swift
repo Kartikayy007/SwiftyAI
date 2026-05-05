@@ -47,8 +47,6 @@ struct AppRootView: View {
                     AIChatHookExampleView()
                 case .aiCompletionHook:
                     AICompletionHookExampleView()
-                case .embeddings:
-                    EmbeddingsExampleView()
                 case .tools:
                     ToolsExampleView()
                 case .options:
