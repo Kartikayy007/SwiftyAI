@@ -91,13 +91,3 @@ export const docsNavGroups = [
     ],
   },
 ] as const;
-
-export const pageSections = [
-  "What it does",
-  "Why it matters",
-  "Before you start",
-  "Steps",
-  "Example",
-  "API notes",
-  "Related docs",
-] as const;

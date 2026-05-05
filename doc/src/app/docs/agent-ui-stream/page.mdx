@@ -1,70 +1,68 @@
 # Agent UI Stream
 
-Agent UI Stream exposes typed events for model progress, tool calls, tool results, failures, and completion.
+`createAgentUIStream` exposes the tool loop as typed UI events. It is built for timelines, progress views, and debug panels where the app needs to show what the agent is doing.
 
-## What it does
-
-`createAgentUIStream` turns a tool loop into an async stream of `AgentEvent` values that application code can render or log.
-
-## Why it matters
-
-Agent behavior is easier to trust when users can see what is happening. Typed events also make debugging and testing tool flows clearer.
-
-## Before you start
-
-1. Build a working [tool calling](/docs/tool-calling) flow.
-
-2. Decide where progress events should be rendered or recorded.
-
-3. Handle `.failed` events and thrown stream errors.
-
-## Steps
-
-<Step title="Create the event stream">
-Pass the model, prompt, tools, and options to `createAgentUIStream`.
-</Step>
-
-<Step title="Switch over events">
-Handle started, model chunks, tool call started, tool call finished, step finished, failed, and finished.
-</Step>
-
-<Step title="Keep UI separate">
-Render the stream in your own app. The SDK does not ship visual components.
-</Step>
-
-## Example
+## Event Stream
 
 ```swift
-import Swifty_AI
-
 let events = createAgentUIStream(
     model: model,
-    prompt: "Check inventory and recommend the best replacement.",
-    tools: [inventoryTool, recommendationTool]
+    prompt: "Check the order and draft a support reply.",
+    tools: [lookupOrderTool],
+    maxSteps: 4
 )
 
 for try await event in events {
     switch event {
+    case .agentStarted:
+        print("agent started")
+    case .stepStarted(let event):
+        print("step started:", event.stepIndex)
     case .modelChunk(let chunk):
         print(chunk.text, terminator: "")
-    case .toolCallStarted(let call):
-        print("Calling \(call.name)")
-    case .toolCallFinished(let result):
-        print("Tool finished: \(result.name)")
+    case .toolCallStarted(let event):
+        print("calling:", event.toolCall.name)
+    case .toolCallFinished(let event):
+        print("tool finished:", event.toolResult.name)
+    case .stepFinished(let event):
+        print("step finished:", event.stepIndex)
+    case .agentFinished(let event):
+        print("final:", event.result.text)
     case .failed(let error):
-        print("Agent failed: \(error)")
-    default:
-        break
+        print("failed:", error.localizedDescription)
     }
 }
 ```
 
-## API notes
+The stream yields events in the same order the loop executes them.
 
-Failure behavior yields `.failed(error)` before the async stream throws the same error, so renderers can show failure state and still keep throwing semantics.
+## Callbacks For State Stores
 
-## Related docs
+You can also receive events through callbacks while still iterating the stream.
+
+```swift
+let stream = createAgentUIStream(
+    model: model,
+    prompt: "Plan the refund workflow.",
+    tools: [lookupOrderTool, policyTool],
+    onEvent: { event in
+        timeline.append(event)
+    },
+    onStepFinish: { step in
+        finishedStepIDs.append(step.index)
+    },
+    onFinish: { result in
+        finalText = result.text
+    }
+)
+```
+
+This is useful in SwiftUI view models where `onEvent` updates observable state and the `for await` loop only keeps the task alive.
+
+## When To Use This
+
+Use `streamWithTools` when your UI only needs text chunks plus tool call/result chunks. Use `createAgentUIStream` when the UI needs a full activity timeline: agent start, each step, each tool call, each result, final success, and failure.
 
 <Related>
-Read [tools](/docs/tools), [tool calling](/docs/tool-calling), and [SwiftUI hooks](/docs/swiftui-hooks).
+Agent UI streams use the same tools and stop conditions described in [tools](/docs/tools) and [tool calling](/docs/tool-calling).
 </Related>

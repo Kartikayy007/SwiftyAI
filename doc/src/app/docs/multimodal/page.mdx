@@ -1,59 +1,77 @@
 # Multimodal Input
 
-Multimodal input sends text with images, PDFs, audio, video, or generic files where the provider supports it.
+Multimodal prompts use `[AIMessageContent]` instead of a single `String`. The same prompt parts can be sent to `generateText`, `streamText`, and `generateObject` when the provider supports the media type.
 
-## What it does
-
-SwiftyAI message content can represent mixed input parts so provider implementations can encode the correct request body.
-
-## Why it matters
-
-Many product workflows start with a document, screenshot, receipt, support image, or audio clip instead of plain text.
-
-## Before you start
-
-1. Confirm the selected provider supports the input type.
-
-2. Keep file size and privacy constraints in mind.
-
-3. Prefer typed content parts over ad hoc prompt strings.
-
-## Steps
-
-<Step title="Create message parts">
-Combine text with URLs, base64 data, or file data.
-</Step>
-
-<Step title="Generate or structure output">
-Use [generate text](/docs/generate-text) for prose or [generate object](/docs/generate-object) for extraction.
-</Step>
-
-<Step title="Handle provider limits">
-Fallback gracefully when a provider rejects an unsupported part.
-</Step>
-
-## Example
+## Images
 
 ```swift
-import Swifty_AI
+let response = try await generateText(
+    model: model,
+    prompt: [
+        .text("List the visible accessibility issues in this screen."),
+        .imageURL(URL(string: "https://example.com/screen.png")!, detail: .high)
+    ]
+)
+```
+
+For local images, pass data:
+
+```swift
+let data = try Data(contentsOf: screenshotURL)
 
 let response = try await generateText(
     model: model,
     prompt: [
-        .text("Describe the main issue in this screenshot."),
-        .imageURL(URL(string: "https://example.com/screenshot.png")!)
+        .text("Describe this chart in one paragraph."),
+        .imageData(data, mediaType: .png, detail: .auto)
     ]
 )
-
-print(response.text)
 ```
 
-## API notes
+## PDFs And Files
 
-OpenAI compatible, Anthropic, and Gemini providers encode multimodal inputs differently. The SDK keeps that detail behind provider implementations.
+```swift
+let report = try Data(contentsOf: reportURL)
 
-## Related docs
+let summary = try await generateText(
+    model: model,
+    prompt: [
+        .text("Summarize the risks in this report."),
+        .pdfData(report, filename: "q4-risk-report.pdf")
+    ]
+)
+```
+
+Generic files can be sent with `fileURL`, `fileData`, or `fileBase64` and an explicit `AIMediaType`.
+
+## Audio And Video Parts
+
+```swift
+let response = try await generateText(
+    model: model,
+    prompt: [
+        .text("Extract action items from this audio clip."),
+        .audioData(audioData, mediaType: .wav, filename: "standup.wav")
+    ]
+)
+```
+
+```swift
+let response = try await generateText(
+    model: model,
+    prompt: [
+        .text("Describe what happens in this product demo."),
+        .videoURL(videoURL)
+    ]
+)
+```
+
+Use [audio](/docs/audio) for dedicated transcription and speech APIs. Multimodal input is for model understanding; media APIs are for producing or transcribing media.
+
+## Provider Support
+
+`AIMessageContent` can represent many media types, but the provider decides which ones are accepted. If a model does not support a media part, the provider call can fail with an API error or `AIError.unsupportedFeature`.
 
 <Related>
-Read [image generation](/docs/image-generation), [audio](/docs/audio), and [video](/docs/video).
+Read [generate text](/docs/generate-text) for the text API and [generate object](/docs/generate-object) for structured extraction from multimodal prompts.
 </Related>

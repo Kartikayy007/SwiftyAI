@@ -1,45 +1,15 @@
 # SwiftyAI
 
-SwiftyAI is a Swift SDK for building text generation, streaming, tools, provider routing, Swift app state, MCP clients, and observability on top of multiple AI providers.
+SwiftyAI is a Swift SDK for building AI features without turning your app into provider glue. The same application code can generate text, stream text, parse structured output, run tool loops, accept multimodal input, call media models, and manage SwiftUI state.
 
-## What it does
+The SDK stays close to Swift. Models are protocols, responses are plain structs, streams are `AsyncThrowingStream`, and UI helpers are optional state objects rather than prebuilt screens.
 
-SwiftyAI gives Swift developers one consistent surface for common AI product work. You can generate text, stream responses, call tools, create structured objects, observe calls, and connect discovered MCP tools.
+## The SDK Shape
 
-## Why it matters
-
-Provider APIs are different enough that small prototypes turn into provider glue quickly. SwiftyAI keeps your application code focused on product behavior while the SDK handles model protocols, request options, streaming chunks, tool loops, and provider specific encoding.
-
-<Callout title="SDK first">
-The SDK ships APIs and state primitives. It does not require adopting prebuilt app screens.
-</Callout>
-
-## Before you start
-
-1. Add SwiftyAI to a Swift package or Xcode project.
-
-2. Configure at least one provider key.
-
-3. Pick either direct model instances or the [provider registry](/docs/provider-registry).
-
-## Steps
-
-<Step title="Install the SDK">
-Start with [installation](/docs/installation), then configure your first provider in [provider setup](/docs/provider-setup).
-</Step>
-
-<Step title="Generate your first response">
-Use [generate text](/docs/generate-text) for simple one shot calls or [stream text](/docs/stream-text) when you need incremental output.
-</Step>
-
-<Step title="Add richer capabilities">
-Layer in [tools](/docs/tools), [MCP](/docs/mcp), and [telemetry](/docs/telemetry) as your product needs them.
-</Step>
-
-## Example
+Most features start with a model and one function call:
 
 ```swift
-import Swifty_AI
+import SwiftyAI
 
 let model = OpenAICompatibleProvider(
     baseURL: "https://api.openai.com/v1",
@@ -49,18 +19,46 @@ let model = OpenAICompatibleProvider(
 
 let response = try await generateText(
     model: model,
-    prompt: "Explain actors in Swift in three sentences."
+    prompt: "Explain Swift actors in three practical bullets."
 )
 
 print(response.text)
 ```
 
-## API notes
+That same model can usually be reused for streaming, object generation, tools, and SwiftUI hooks if it conforms to the matching protocol.
 
-The main entry points are [generateText](/docs/generate-text), [streamText](/docs/stream-text), [generateObject](/docs/generate-object), [tools](/docs/tools), [SwiftUI hooks](/docs/swiftui-hooks), [MCP](/docs/mcp), and [telemetry](/docs/telemetry).
+## Core Features
 
-## Related docs
+- `generateText` returns a complete `AIResponse` with text, model, token usage, and finish reason when the provider sends them.
+- `streamText` yields `AIStreamChunk` values as text arrives and can also call `onChunk` and `onFinish`.
+- `GenerationOptions` carries system prompts, sampling controls, max tokens, stop sequences, per-request headers, retries, and prompt caching hints.
+- `generateObject` and `streamObject` ask the model for JSON and validate it against an `AISchema`.
+- `tool`, `dynamicTool`, `generateWithTools`, and `streamWithTools` run multi-step tool loops with stop conditions and callbacks.
+- `AIChat` and `AICompletion` give SwiftUI apps observable state for chat and one-shot completions.
 
-<Related>
-Start with [quickstart](/docs/quickstart), then read [generation options](/docs/generation-options), [provider registry](/docs/provider-registry), and [streaming utilities](/docs/streaming-utilities).
-</Related>
+## Choosing A Path
+
+Use direct provider instances when you want explicit dependencies and simple tests. Use model strings when your app has central configuration and wants calls like `"openai/gpt-4o-mini"` or `"ollama/llama3.2"`.
+
+```swift
+AI.configure { ai in
+    ai.openAI(apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!)
+    ai.ollama()
+}
+
+let cloud = try await generateText(
+    model: "openai/gpt-4o-mini",
+    prompt: "Write a one-line release note."
+)
+
+let local = try await generateText(
+    model: "ollama/llama3.2",
+    prompt: "Summarize this log file."
+)
+```
+
+Call `AI.configure` during app startup before user-driven requests. For library code, tests, and dependency injection, prefer direct model instances or a local `ProviderRegistry`.
+
+## Next Reads
+
+Start with [installation](/docs/installation), then [provider setup](/docs/provider-setup) and [quickstart](/docs/quickstart). After that, read the feature pages for [text](/docs/generate-text), [streaming](/docs/stream-text), [objects](/docs/generate-object), [tools](/docs/tool-calling), and [SwiftUI hooks](/docs/swiftui-hooks).

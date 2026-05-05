@@ -1,7 +1,12 @@
 import Link from "next/link";
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import {
+  isValidElement,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CopyCodeButton } from "@/components/docs/copy-code-button";
 
 type CalloutProps = {
   title?: string;
@@ -56,6 +61,33 @@ function Related({
   );
 }
 
+function getText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(getText).join("");
+  }
+
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return getText(node.props.children);
+  }
+
+  return "";
+}
+
+function CodeBlock(props: ComponentPropsWithoutRef<"pre">) {
+  const code = getText(props.children).trimEnd();
+
+  return (
+    <div className="group relative">
+      <CopyCodeButton code={code} />
+      <pre {...props} />
+    </div>
+  );
+}
+
 export function useMDXComponents(components: Record<string, unknown>) {
   return {
     a: (props: ComponentPropsWithoutRef<"a">) => {
@@ -67,6 +99,7 @@ export function useMDXComponents(components: Record<string, unknown>) {
 
       return <a {...props} />;
     },
+    pre: CodeBlock,
     Callout,
     Step,
     Related,

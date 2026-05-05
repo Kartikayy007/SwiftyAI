@@ -1,68 +1,80 @@
 # Generate Text
 
-`generateText` sends a prompt to a model and returns a complete `AIResponse`.
-
-## What it does
-
-Use `generateText` for classification, summarization, short assistants, batch jobs, tests, and any flow where your code waits for one final answer.
-
-## Why it matters
-
-It is the simplest model call in the SDK. It gives you text, model metadata, token usage when the provider returns it, and a finish reason.
-
-## Before you start
-
-1. Configure a provider.
-
-2. Decide whether a direct model or [provider registry](/docs/provider-registry) string fits your app.
-
-3. Choose [generation options](/docs/generation-options) for control.
-
-## Steps
-
-<Step title="Create a model">
-Use a direct provider instance for the first call.
-</Step>
-
-<Step title="Send a prompt">
-Pass the model and prompt into `generateText`.
-</Step>
-
-<Step title="Read the response">
-Use `response.text`, `response.usage`, and `response.finishReason`.
-</Step>
-
-## Example
+`generateText` is the simplest language-model entry point. It sends a prompt, waits for completion, and returns an `AIResponse`.
 
 ```swift
-import Swifty_AI
-
-let model = OpenAICompatibleProvider(
-    baseURL: "https://api.openai.com/v1",
-    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
-    model: "gpt-4o-mini"
-)
-
 let response = try await generateText(
     model: model,
-    prompt: "Summarize the benefits of Swift actors.",
-    options: GenerationOptions(
-        system: "Answer for an experienced iOS engineer.",
-        temperature: 0.2,
-        maxTokens: 250
-    )
+    prompt: "Draft a friendly push notification for a habit tracker."
 )
 
 print(response.text)
-print(response.usage?.totalTokens ?? 0)
 ```
 
-## API notes
+## Response Metadata
 
-Use [stream text](/docs/stream-text) when the user should see output immediately. Use [generate object](/docs/generate-object) when you need typed structured output.
+`AIResponse` keeps provider metadata beside the generated text:
 
-## Related docs
+```swift
+let response = try await generateText(model: model, prompt: "Name this feature.")
+
+let text = response.text
+let modelName = response.model
+let usage = response.usage
+let finishReason = response.finishReason
+
+print(text)
+print("input:", usage?.inputTokens ?? 0)
+print("output:", usage?.outputTokens ?? 0)
+```
+
+`usage`, `model`, and `finishReason` are optional because not every provider returns them for every request.
+
+## System Prompt And Sampling
+
+Use `GenerationOptions` to describe behavior that belongs to one request:
+
+```swift
+let response = try await generateText(
+    model: model,
+    prompt: "Explain this crash log to a junior iOS engineer.",
+    options: GenerationOptions(
+        system: "You are a senior iOS engineer. Be direct and specific.",
+        temperature: 0.2,
+        maxTokens: 500
+    )
+)
+```
+
+## Multimodal Prompt Overload
+
+When the provider supports it, `generateText` can take message parts instead of a single string:
+
+```swift
+let response = try await generateText(
+    model: model,
+    prompt: [
+        .text("Describe the important UI details in this screenshot."),
+        .imageURL(URL(string: "https://example.com/screenshot.png")!, detail: .high)
+    ]
+)
+```
+
+The text-only overload is still the best default. Use message parts when you need images, PDFs, audio, video, or files in the prompt.
+
+## Registry Form
+
+If the app uses `AI.configure`, you can pass a model string:
+
+```swift
+let response = try await generateText(
+    model: "openai/gpt-4o-mini",
+    prompt: "Write a short changelog entry."
+)
+```
+
+For reusable libraries, direct model values are easier to inject and test.
 
 <Related>
-Read [generation options](/docs/generation-options), [provider setup](/docs/provider-setup), and [telemetry](/docs/telemetry).
+Read [generation options](/docs/generation-options), [stream text](/docs/stream-text), and [multimodal input](/docs/multimodal).
 </Related>

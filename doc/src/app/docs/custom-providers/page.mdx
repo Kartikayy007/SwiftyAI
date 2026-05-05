@@ -1,60 +1,87 @@
 # Custom Providers
 
-Custom providers let your own services conform to SwiftyAI model protocols.
+A custom provider is any Swift type that conforms to one or more SwiftyAI model protocols. Start with the smallest protocol your feature needs, then add streaming, tools, or media only when the provider can really support them.
 
-## What it does
-
-You can wrap an internal model gateway, mock service, enterprise proxy, or experimental backend behind SDK protocols.
-
-## Why it matters
-
-Not every model endpoint should become SDK core. Custom providers keep extension points public without bloating built in provider code.
-
-## Before you start
-
-1. Choose the exact protocol your provider supports.
-
-2. Keep request and response mapping isolated.
-
-3. Add tests with deterministic fake responses.
-
-## Steps
-
-<Step title="Conform to the protocol">
-Implement the smallest model protocol your feature needs.
-</Step>
-
-<Step title="Return SDK response types">
-Map provider responses into `AIResponse`, stream chunks, tools, or media results.
-</Step>
-
-<Step title="Register the provider">
-Expose it through [provider registry](/docs/provider-registry) when app code should resolve it by string.
-</Step>
-
-## Example
+## Text Provider
 
 ```swift
-import Swifty_AI
+import SwiftyAI
 
-struct InternalTextModel: AIModel {
+struct EchoModel: AIModel {
     func generate(_ prompt: String) async throws -> AIResponse {
-        AIResponse(text: "Internal answer for: \(prompt)")
+        AIResponse(text: "Echo: \(prompt)", model: "echo")
     }
 }
 
 let response = try await generateText(
-    model: InternalTextModel(),
-    prompt: "Summarize the incident report."
+    model: EchoModel(),
+    prompt: "Hello"
 )
 ```
 
-## API notes
+`AIModel` has default implementations for options and multimodal prompts, so a simple text provider only needs `generate(_ prompt: String)`.
 
-Prefer protocol conformance for real backends and mock models for tests. Keep custom providers free of app UI assumptions.
+## Streaming Provider
 
-## Related docs
+```swift
+struct EchoStreamModel: AIStreamModel {
+    func generate(_ prompt: String) async throws -> AIResponse {
+        AIResponse(text: prompt, model: "echo-stream")
+    }
+
+    func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                for word in prompt.split(separator: " ") {
+                    continuation.yield(AIStreamChunk(text: "\(word) "))
+                }
+                continuation.finish()
+            }
+        }
+    }
+}
+```
+
+The `AIStreamModel` extension supplies the other stream overloads unless you need custom chat-history or multimodal behavior.
+
+## Middleware Wrapping
+
+Middleware lets you adapt a provider without changing the provider itself.
+
+```swift
+let wrapped = wrapStreamingLanguageModel(
+    EchoStreamModel(),
+    middleware: [
+        defaultSettingsMiddleware(system: "Always answer in one sentence."),
+        extractReasoningMiddleware()
+    ],
+    streamMiddleware: [
+        simulateStreamingMiddleware(chunkSize: 12, delay: .milliseconds(40))
+    ]
+)
+```
+
+Use `defaultSettingsMiddleware` for defaults, `extractJsonMiddleware` for JSON cleanup, `extractReasoningMiddleware` for stripping reasoning tags, and `simulateStreamingMiddleware` when a text model needs a stream-like UI.
+
+## Registry Integration
+
+```swift
+let registry = createProviderRegistry([
+    "local": customProvider(
+        languageModels: ["echo": EchoModel()],
+        streamModels: ["echo-stream": EchoStreamModel()]
+    )
+])
+
+let response = try await generateText(
+    model: "local/echo",
+    registry: registry,
+    prompt: "Testing"
+)
+```
+
+This keeps custom providers test-local and avoids global app configuration.
 
 <Related>
-Read [providers](/docs/providers), [provider registry](/docs/provider-registry), and [telemetry](/docs/telemetry).
+Read [provider registry](/docs/provider-registry) and [generation options](/docs/generation-options).
 </Related>
