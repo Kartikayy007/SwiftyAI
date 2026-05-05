@@ -94,8 +94,8 @@ let options = ToolExecutionOptions(
         }
         return .execute
     },
-    onTelemetry: { event in
-        print(event)
+    onToolResult: { result in
+        print("tool result:", result.name)
     },
     errorPolicy: .failFast
 )

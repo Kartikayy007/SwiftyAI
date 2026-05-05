@@ -6,7 +6,6 @@ import {
   Clapperboard,
   Cpu,
   FileText,
-  Gauge,
   Image,
   KeyRound,
   Layers,
@@ -73,13 +72,6 @@ export const docsNavGroups = [
       { title: "SwiftUI Hooks", href: "/docs/swiftui-hooks", icon: MessageSquareText },
       { title: "AIChat", href: "/docs/ai-chat", icon: MessageSquareText },
       { title: "AICompletion", href: "/docs/ai-completion", icon: TextCursorInput },
-    ],
-  },
-  {
-    title: "MCP and Observability",
-    items: [
-      { title: "MCP", href: "/docs/mcp", icon: Cpu },
-      { title: "Telemetry", href: "/docs/telemetry", icon: Gauge },
     ],
   },
   {
