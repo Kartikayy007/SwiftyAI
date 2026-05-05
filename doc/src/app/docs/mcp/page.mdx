@@ -1,64 +1,84 @@
 # MCP
 
-MCP support lets SwiftyAI connect to Model Context Protocol servers through a transport abstraction.
+SwiftyAI includes a lightweight Model Context Protocol client. It handles JSON-RPC request shapes, initialization, tool listing, and tool calls. You provide the transport.
 
-## What it does
-
-`MCPClient` initializes a protocol session, lists tools, calls tools, and adapts discovered MCP tools into executable SwiftyAI tools.
-
-## Why it matters
-
-MCP gives agents access to external capabilities without hardcoding every tool into your app. SwiftyAI keeps the core client transport agnostic.
-
-## Before you start
-
-1. Provide an `MCPTransport`.
-
-2. Call `initialize` before tool operations.
-
-3. Adapt tools only after discovery succeeds.
-
-## Steps
-
-<Step title="Create a transport">
-Implement JSON data I/O for your server, process, or test mock.
-</Step>
-
-<Step title="Initialize the client">
-Call `initialize` and let the client send `notifications/initialized`.
-</Step>
-
-<Step title="Use discovered tools">
-Call `listTools`, adapt them to `AITool`, then pass them into [tool calling](/docs/tool-calling).
-</Step>
-
-## Example
+## Client Flow
 
 ```swift
-import Foundation
-import Swifty_AI
+import SwiftyAI
 
 let client = MCPClient(transport: transport)
-try await client.initialize()
+
+let server = try await client.initialize()
+print(server.serverInfo.name)
 
 let tools = try await client.listTools()
-let sdkTools = tools.map { $0.asAITool(client: client) }
+print(tools.map(\.name))
 
-let result = try await generateWithTools(
-    model: model,
-    prompt: "Use available tools to inspect the project.",
-    tools: sdkTools
+let result = try await client.callTool(
+    name: "search_docs",
+    arguments: [
+        "query": .string("SwiftyAI generateText")
+    ]
 )
-
-print(result.text)
 ```
 
-## API notes
+`initialize()` is cached. Calling it more than once returns the first successful result.
 
-The SDK ships client primitives, not a concrete network or stdio transport in this change.
+## Transport Boundary
 
-## Related docs
+The transport is intentionally small:
+
+```swift
+public protocol MCPTransport: Sendable {
+    func send(_ data: Data, expectsResponse: Bool) async throws -> Data?
+}
+```
+
+That keeps process management, stdio, HTTP, authentication, and sandboxing in your app. SwiftyAI only needs encoded request bytes and optional response bytes.
+
+## Tool Data
+
+MCP arguments use `MCPJSONValue` so values stay typed before encoding.
+
+```swift
+let result = try await client.callTool(
+    name: "create_issue",
+    arguments: [
+        "title": .string("Docs typo"),
+        "priority": .string("low"),
+        "labels": .array([.string("docs"), .string("good first issue")])
+    ]
+)
+```
+
+The result contains MCP content blocks. Convert those blocks into the app representation you need before showing them in UI or sending them back to a model.
+
+## Using MCP With Tool Loops
+
+MCP tools and SwiftyAI `AITool` are separate types. A practical adapter usually lists MCP tools, builds matching `dynamicTool` values, and calls `client.callTool` from each tool executor.
+
+```swift
+let swiftyTool = dynamicTool(
+    name: "search_docs",
+    description: "Search project documentation.",
+    inputSchema: .object(
+        properties: [
+            "query": .string(description: "Search query")
+        ]
+    )
+) { arguments in
+    let query = arguments["query"] as? String ?? ""
+    let result = try await client.callTool(
+        name: "search_docs",
+        arguments: ["query": .string(query)]
+    )
+    return String(describing: result.content)
+}
+```
+
+Keep approvals around MCP-backed tools. External tools can read files, call services, or mutate state depending on the server.
 
 <Related>
-Read [tools](/docs/tools), [tool calling](/docs/tool-calling), and [agent UI stream](/docs/agent-ui-stream).
+Read [tools](/docs/tools) and [tool calling](/docs/tool-calling) for SwiftyAI tool loops.
 </Related>

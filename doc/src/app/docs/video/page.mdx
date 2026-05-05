@@ -1,58 +1,59 @@
 # Video
 
-Video generation creates video outputs through providers that expose operation based media APIs.
+`generateVideo` starts a provider video job, polls until it is complete, and returns a `VideoResponse` with MP4 data.
 
-## What it does
-
-SwiftyAI provides video generation primitives that can create provider operations, poll completion, and return downloaded media.
-
-## Why it matters
-
-Video generation usually has a different lifecycle from text. The SDK keeps that operation flow separate from text generation while preserving a familiar API shape.
-
-## Before you start
-
-1. Choose a provider with video generation support.
-
-2. Expect longer latency than text or image generation.
-
-3. Treat output as binary media, not a chat response.
-
-## Steps
-
-<Step title="Create a video model">
-Use a video capable provider and model.
-</Step>
-
-<Step title="Start generation">
-Pass a text or image prompt and media options.
-</Step>
-
-<Step title="Use the returned media">
-Store the generated video or hand it to your app layer.
-</Step>
-
-## Example
+## Generate Video
 
 ```swift
-import Swifty_AI
+let videoModel = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "sora-video-model"
+)
 
 let video = try await generateVideo(
     model: videoModel,
-    prompt: "A short product shot of a Swift SDK logo glowing in orange light.",
-    options: VideoGenerationOptions(durationSeconds: 4)
+    prompt: "A simple product walkthrough of a Swift package documentation site.",
+    options: VideoGenerationOptions(
+        size: .landscape1536x1024,
+        seconds: 8,
+        pollInterval: .seconds(5),
+        maxPollAttempts: 60
+    )
 )
 
-print(video.mediaType)
-print(video.data.count)
+try video.data.write(to: outputURL)
 ```
 
-## API notes
+`VideoResponse` includes the provider job `id`, final `data`, `mediaType`, optional `model`, and optional `status`.
 
-Video provider APIs often use polling. Keep cancellation and retry behavior visible in your app layer.
+## Gemini Video
 
-## Related docs
+Gemini video generation uses the same function with a `GeminiProvider`.
+
+```swift
+let gemini = GeminiProvider(
+    apiKey: ProcessInfo.processInfo.environment["GEMINI_API_KEY"]!,
+    model: "veo-video-model"
+)
+
+let video = try await generateVideo(
+    model: gemini,
+    prompt: "A calm onboarding animation for a task app.",
+    options: VideoGenerationOptions(
+        aspectRatio: "16:9",
+        seconds: 6,
+        negativePrompt: "No text overlays"
+    )
+)
+```
+
+Video model names and limits change by provider account, so keep them in configuration rather than hard-coding them deep in UI code.
+
+## Polling Controls
+
+`VideoGenerationOptions` includes `pollInterval` and `maxPollAttempts`. Increase `maxPollAttempts` for long jobs. Decrease `pollInterval` only if the provider allows frequent polling.
 
 <Related>
-Read [image generation](/docs/image-generation), [multimodal input](/docs/multimodal), and [telemetry](/docs/telemetry).
+Use [multimodal input](/docs/multimodal) when video is part of a prompt rather than the generated output.
 </Related>

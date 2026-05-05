@@ -1,65 +1,80 @@
 # Providers
 
-Providers adapt external and local model services to SwiftyAI protocols.
+SwiftyAI includes concrete providers plus an OpenAI-compatible adapter. The SDK API stays the same; the provider decides how requests are encoded.
 
-## What it does
+## Built-In Prefixes
 
-Provider implementations cover text generation, streaming, tools, image generation, audio, video, and local model use.
+`AI.configure` supports these model string prefixes:
 
-## Why it matters
-
-AI products should not hardcode one backend forever. Providers let you choose capability, cost, latency, privacy, or availability per feature.
-
-## Before you start
-
-1. Choose the provider by capability, not popularity.
-
-2. Use OpenAI compatible providers when the service follows chat completions style APIs.
-
-3. Use provider specific types when the service has unique request shapes.
-
-## Steps
-
-<Step title="Pick a capability">
-Text, streaming, tools, media, and local models use different protocols.
-</Step>
-
-<Step title="Create the provider">
-Pass API keys, base URLs, model IDs, and sessions as needed.
-</Step>
-
-<Step title="Use the shared SDK API">
-Call the same public helpers regardless of provider.
-</Step>
-
-## Example
+- `openai`
+- `anthropic`
+- `gemini`
+- `groq`
+- `openrouter`
+- `mistral`
+- `cohere`
+- `cloudflare`
+- `ollama`
 
 ```swift
-import Swifty_AI
+AI.configure { ai in
+    ai.openAI(apiKey: openAIKey)
+    ai.anthropic(apiKey: anthropicKey)
+    ai.gemini(apiKey: geminiKey)
+    ai.groq(apiKey: groqKey)
+    ai.ollama(baseURL: "http://localhost:11434/v1")
+}
 
+let response = try await generateText(
+    model: "anthropic/claude-3-5-sonnet-latest",
+    prompt: "Write a concise migration note."
+)
+```
+
+## Direct Provider Types
+
+Use direct providers when you want explicit construction.
+
+```swift
 let openAI = OpenAICompatibleProvider(
     baseURL: "https://api.openai.com/v1",
-    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    apiKey: openAIKey,
     model: "gpt-4o-mini"
 )
 
 let anthropic = AnthropicProvider(
-    apiKey: ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"]!,
-    model: "claude-haiku-4-5-20251001"
+    apiKey: anthropicKey,
+    model: "claude-3-5-sonnet-latest"
 )
 
 let gemini = GeminiProvider(
-    apiKey: ProcessInfo.processInfo.environment["GEMINI_API_KEY"]!,
-    model: "gemini-2.5-flash"
+    apiKey: geminiKey,
+    model: "gemini-2.0-flash"
 )
 ```
 
-## API notes
+`AppleFoundationProvider` is available when the target can import `FoundationModels`.
 
-Provider tests should mock network sessions. Live provider tests should skip when keys or local services are unavailable.
+## OpenAI-Compatible Providers
 
-## Related docs
+`OpenAICompatibleProvider` powers OpenAI plus compatible APIs such as Groq, OpenRouter, Mistral, Cohere, Cloudflare, Ollama, and private gateways.
+
+```swift
+let local = OpenAICompatibleProvider(
+    baseURL: "http://localhost:11434/v1",
+    apiKey: "ollama",
+    model: "llama3.2"
+)
+```
+
+This adapter supports text, streaming, tools, and the media protocols when the underlying endpoint supports them.
+
+## Capability Guide
+
+Text and streaming are the safest cross-provider assumptions. Tool calling requires `AIToolCallingModel`. Media APIs require `AIImageModel`, `AITranscriptionModel`, `AISpeechModel`, or `AIVideoModel`.
+
+When a provider cannot support a call, SwiftyAI throws instead of silently pretending the feature exists.
 
 <Related>
-Read [provider setup](/docs/provider-setup), [provider registry](/docs/provider-registry), and [local models](/docs/local-models).
+Read [provider setup](/docs/provider-setup), [local models](/docs/local-models), and [custom providers](/docs/custom-providers).
 </Related>

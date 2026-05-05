@@ -1,55 +1,73 @@
 # Utilities
 
-Utilities are small helpers that make SDK features easier to test, stream, and manage.
+SwiftyAI includes small utilities for ids, context estimates, streams, and middleware. They are intentionally plain Swift so you can use them outside the high-level examples.
 
-## What it does
-
-SwiftyAI includes helpers for IDs, stream simulation, smooth streaming, UI message validation, pruning, truncation, and context management.
-
-## Why it matters
-
-These helpers remove repeated product glue around common AI workflows.
-
-## Before you start
-
-1. Use utilities where they clarify code.
-
-2. Keep business rules in your app layer.
-
-3. Prefer deterministic utilities in tests.
-
-## Steps
-
-<Step title="Generate IDs">
-Use `generateId` for message, request, or call identifiers.
-</Step>
-
-<Step title="Manage messages">
-Use message validation, pruning, and truncation helpers.
-</Step>
-
-<Step title="Shape streams">
-Use simulation and smoothing helpers for tests and user experience.
-</Step>
-
-## Example
+## IDs
 
 ```swift
-import Swifty_AI
-
-let requestId = generateId(prefix: "req")
-let callId = generateId(prefix: "call")
-
-print(requestId)
-print(callId)
+let id = generateId()
+let requestID = generateId(prefix: "req")
 ```
 
-## API notes
+`generateId(prefix:)` returns values like `req_<uuid>`, which is useful for request headers and logs.
 
-Telemetry uses compact ID prefixes such as `req_` and `call_` for public event values.
+## Context Window Estimates
 
-## Related docs
+`ContextWindow` gives a simple token estimate for text and chat messages.
+
+```swift
+let context = ContextWindow(maxTokens: 8_000, warningThreshold: 0.85)
+
+let messages = [
+    ChatMessage(role: .system, content: "Be concise."),
+    ChatMessage(role: .user, content: "Explain streaming.")
+]
+
+let used = context.estimatedTokens(for: messages)
+let remaining = context.remaining(for: messages)
+let nearLimit = context.isNearLimit(for: messages)
+```
+
+This is an approximation, not a provider tokenizer. Use it for UI warnings and rough pruning decisions.
+
+## Language Middleware
+
+Middleware wraps models with reusable behavior.
+
+```swift
+let wrapped = wrapLanguageModel(
+    model,
+    middleware: [
+        defaultSettingsMiddleware(
+            system: "Answer in short paragraphs.",
+            temperature: 0.3
+        ),
+        extractJsonMiddleware(onFailure: .leaveUnchanged)
+    ]
+)
+
+let response = try await generateText(
+    model: wrapped,
+    prompt: "Return a JSON object with title and summary."
+)
+```
+
+For streaming models, use `wrapStreamingLanguageModel`.
+
+## Stream Helpers
+
+```swift
+for try await chunk in simulateReadableStream(
+    "This text appears in pieces.",
+    chunkSize: 6,
+    delay: .milliseconds(50)
+) {
+    print(chunk)
+}
+```
+
+Use stream helpers for previews, tests, and smoothing UI updates.
 
 <Related>
-Read [message management](/docs/message-management), [streaming utilities](/docs/streaming-utilities), and [telemetry](/docs/telemetry).
+Read [streaming utilities](/docs/streaming-utilities) for more examples.
 </Related>

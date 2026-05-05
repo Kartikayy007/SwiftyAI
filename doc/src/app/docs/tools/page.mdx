@@ -1,71 +1,115 @@
 # Tools
 
-Tools let the model request your Swift functions during a generation loop.
+Tools let a model ask your Swift code to do work: look up data, call an API, calculate a value, or perform an app action after approval.
 
-## What it does
+SwiftyAI has two builders:
 
-A tool has a name, description, input schema, and execution closure. The model decides when to call it, and SwiftyAI feeds the result back into the loop.
+- `tool` decodes arguments into a Swift `Decodable` type.
+- `dynamicTool` gives you raw `[String: Any]` arguments.
 
-## Why it matters
+## Typed Tool
 
-Tools let models interact with live application capabilities such as search, calendars, databases, payment checks, and internal APIs.
-
-## Before you start
-
-1. Give each tool a clear name.
-
-2. Describe exactly when the model should use it.
-
-3. Validate tool inputs before touching external systems.
-
-## Steps
-
-<Step title="Define the tool">
-Create typed or dynamic tools depending on whether the input shape is known at compile time.
-</Step>
-
-<Step title="Pass tools to the model loop">
-Use [tool calling](/docs/tool-calling) for multi step execution.
-</Step>
-
-<Step title="Observe tool behavior">
-Use [telemetry](/docs/telemetry) or [agent UI stream](/docs/agent-ui-stream) to inspect calls.
-</Step>
-
-## Example
+Typed tools are the best default because invalid arguments fail before your business logic runs.
 
 ```swift
-import Swifty_AI
+import SwiftyAI
 
-let weatherTool = AITool(
-    name: "get_weather",
-    description: "Get the current weather for a city.",
-    parameters: [
-        "type": "object",
-        "properties": [
-            "city": ["type": "string"]
-        ],
-        "required": ["city"]
-    ]
-) { arguments in
-    "Sunny and 24C"
+struct WeatherInput: Decodable {
+    let city: String
 }
 
-let result = try await generateWithTools(
-    model: model,
-    prompt: "What should I wear in Bengaluru today?",
-    tools: [weatherTool]
-)
-
-print(result.text)
+let weatherTool = tool(
+    name: "get_weather",
+    description: "Get the current weather for a city.",
+    inputSchema: .object(
+        properties: [
+            "city": .string(description: "City name, for example London")
+        ]
+    )
+) { (input: WeatherInput) async throws in
+    "It is 21C and clear in \(input.city)."
+}
 ```
 
-## API notes
+The tool result can be a `String` or any `Encodable` value. Non-string values are JSON encoded before they are sent back to the model.
 
-Prefer typed tools for app code and dynamic tools for MCP, plugin, or runtime discovered capabilities.
+## Dynamic Tool
 
-## Related docs
+Use `dynamicTool` when the shape is intentionally loose.
+
+```swift
+let lookupTool = dynamicTool(
+    name: "lookup_order",
+    description: "Find an order by id.",
+    inputSchema: .object(
+        properties: [
+            "orderID": .string(description: "Internal order id")
+        ]
+    )
+) { arguments in
+    let orderID = arguments["orderID"] as? String ?? "unknown"
+    return #"{"orderID":"\#(orderID)","status":"shipped"}"#
+}
+```
+
+Dynamic tools are useful at integration boundaries, but typed tools make app code easier to reason about.
+
+## Approval And Interception
+
+`ToolExecutionOptions` lets the app inspect, reject, replace, or short-circuit tool calls.
+
+```swift
+let toolOptions = ToolExecutionOptions(
+    approval: { call in
+        if call.name == "send_email" {
+            return .reject(reason: "Email sending requires user confirmation.")
+        }
+
+        return .execute
+    },
+    onToolResult: { result in
+        print("tool result:", result.name, result.isError)
+    },
+    parallelToolCalls: true,
+    errorPolicy: .returnErrorResult
+)
+```
+
+Use `approval` for user or policy gates. Use `onToolCall` when you want to rewrite arguments, return a cached result, or block a call before execution.
+
+## Output Schema
+
+Tools can also describe their own output:
+
+```swift
+struct AccountInput: Decodable {
+    let id: String
+}
+
+struct AccountStatus: Encodable {
+    let status: String
+    let balance: Double
+}
+
+let accountTool = tool(
+    name: "get_account",
+    description: "Return account status.",
+    inputSchema: .object(
+        properties: ["id": .string(description: "Account id")]
+    ),
+    outputSchema: .object(
+        properties: [
+            "status": .enumeration(["active", "paused", "closed"]),
+            "balance": .number(description: "Current balance")
+        ]
+    )
+) { (input: AccountInput) async throws in
+    AccountStatus(status: "active", balance: 42.50)
+}
+```
+
+The model still receives the actual tool result as text. The schema helps tool-capable providers plan better calls.
 
 <Related>
-Read [tool calling](/docs/tool-calling), [MCP](/docs/mcp), and [agent UI stream](/docs/agent-ui-stream).
+Read [tool calling](/docs/tool-calling) for loops, `maxSteps`, stop conditions, and callbacks.
 </Related>
