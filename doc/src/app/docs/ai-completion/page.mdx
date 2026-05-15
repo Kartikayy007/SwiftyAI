@@ -1,61 +1,79 @@
 # AICompletion
 
-`AICompletion` manages single prompt completion state for Swift apps.
+`AICompletion` is an observable state object for one prompt and one generated response. It is useful for rewrite tools, title generators, summary panels, and other non-chat UI.
 
-## What it does
-
-It stores prompt input, generated output, loading state, errors, and an internal task for cancellation.
-
-## Why it matters
-
-Many AI features are not chat. `AICompletion` fits rewrite boxes, summarizers, title generators, and one shot assistant actions.
-
-## Before you start
-
-1. Choose a text model.
-
-2. Bind `prompt` or `input` to your own field.
-
-3. Render `completion` or `output` in your own view.
-
-## Steps
-
-<Step title="Create AICompletion">
-Initialize it with a direct model or registry model string.
-</Step>
-
-<Step title="Send synchronously">
-Call `send`; the hook starts and stores the task internally.
-</Step>
-
-<Step title="Handle state">
-Use `isLoading`, `error`, `stop`, and `reset`.
-</Step>
-
-## Example
+## State Model
 
 ```swift
-import Swifty_AI
+@State private var completion = AICompletion(
+    model: "openai/gpt-4o-mini",
+    options: GenerationOptions(
+        system: "Write concise UI copy.",
+        temperature: 0.4
+    )
+)
+```
 
-@MainActor
-func summarize(completion: AICompletion) {
-    completion.prompt = "Summarize this release note in one sentence."
-    completion.send()
+The public state is:
 
-    if let error = completion.error {
-        print(error)
+- `input: String`
+- `output: String`
+- `prompt: String`
+- `completion: String`
+- `isLoading: Bool`
+- `error: Error?`
+
+`prompt` and `completion` are aliases for `input` and `output`.
+
+## Generate
+
+```swift
+completion.input = "Write a tooltip for archiving a project."
+completion.send()
+```
+
+`send()` clears the previous output, starts a task, and writes the final response into `output`.
+
+## View Example
+
+```swift
+struct RewriteView: View {
+    @State private var completion = AICompletion(model: "openai/gpt-4o-mini")
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            TextEditor(text: $completion.prompt)
+                .frame(minHeight: 120)
+
+            HStack {
+                Button("Generate") {
+                    completion.send()
+                }
+                .disabled(completion.isLoading || completion.prompt.isEmpty)
+
+                Button("Reset") {
+                    completion.reset()
+                }
+            }
+
+            if completion.isLoading {
+                ProgressView()
+            }
+
+            Text(completion.completion)
+        }
     }
-
-    print(completion.output)
 }
 ```
 
-## API notes
+## Cancellation
 
-Use [AIChat](/docs/ai-chat) when the user expects multi turn history. Use `AICompletion` for single prompt workflows.
+```swift
+completion.stop()
+```
 
-## Related docs
+`stop()` cancels the active task and resets `isLoading`. `reset()` also clears `input`, `output`, and `error`.
 
 <Related>
-Read [SwiftUI hooks](/docs/swiftui-hooks), [generate text](/docs/generate-text), and [generation options](/docs/generation-options).
+Use [AIChat](/docs/ai-chat) for multi-turn streaming conversations.
 </Related>

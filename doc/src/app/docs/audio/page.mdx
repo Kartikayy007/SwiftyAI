@@ -1,67 +1,77 @@
 # Audio
 
-Audio APIs cover transcription and speech generation.
+SwiftyAI exposes two dedicated audio paths: `transcribe` for audio-to-text and `generateSpeech` for text-to-audio.
 
-## What it does
-
-Use transcription to turn audio files into text. Use speech generation to turn text into audio.
-
-## Why it matters
-
-Voice notes, support calls, accessibility features, and spoken assistants all need audio primitives that fit the same provider abstraction.
-
-## Before you start
-
-1. Choose a provider with transcription or speech support.
-
-2. Know the accepted audio formats.
-
-3. Keep binary data handling outside prompts.
-
-## Steps
-
-<Step title="Transcribe audio">
-Send audio data or a file payload to a transcription model.
-</Step>
-
-<Step title="Generate speech">
-Send text and voice options to a speech model.
-</Step>
-
-<Step title="Connect to generation">
-Feed transcripts into [generate text](/docs/generate-text) or tools.
-</Step>
-
-## Example
+## Transcription
 
 ```swift
-import Foundation
-import Swifty_AI
+let transcriptionModel = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-4o-transcribe"
+)
 
-let audioData = try Data(contentsOf: URL(fileURLWithPath: "meeting.m4a"))
+let audio = AIAudioInput(
+    data: audioData,
+    filename: "meeting.wav",
+    mediaType: .wav
+)
 
 let transcript = try await transcribe(
     model: transcriptionModel,
-    audio: audioData,
-    fileName: "meeting.m4a"
+    audio: audio,
+    options: TranscriptionOptions(
+        language: "en",
+        prompt: "This is a product planning meeting.",
+        responseFormat: .json
+    )
+)
+
+print(transcript.text)
+```
+
+`TranscriptionResponse` includes text plus optional language, duration, and model fields.
+
+## Speech Generation
+
+```swift
+let speechModel = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-4o-mini-tts"
 )
 
 let speech = try await generateSpeech(
     model: speechModel,
-    text: "Your summary is ready.",
-    voice: "alloy"
+    text: "Your export is ready.",
+    options: SpeechOptions(
+        voice: "alloy",
+        format: .mp3,
+        speed: 1.0,
+        instructions: "Calm, clear, and brief."
+    )
 )
 
-print(transcript.text)
-print(speech.data.count)
+try speech.data.write(to: outputURL)
 ```
 
-## API notes
+`SpeechResponse` returns the audio bytes, format, media type, and model.
 
-Use [telemetry](/docs/telemetry) around audio workflows to track latency and failures, especially for large files.
+## Gemini Audio
 
-## Related docs
+Gemini can also be used through `GeminiProvider` for supported audio operations:
+
+```swift
+let gemini = GeminiProvider(
+    apiKey: ProcessInfo.processInfo.environment["GEMINI_API_KEY"]!,
+    model: "gemini-audio-model"
+)
+
+let transcript = try await transcribe(model: gemini, audio: audio)
+```
+
+Use provider documentation to choose the exact model that supports your desired operation.
 
 <Related>
-Read [multimodal input](/docs/multimodal), [generate text](/docs/generate-text), and [providers](/docs/providers).
+For audio inside a prompt, read [multimodal input](/docs/multimodal). For generated media, read [image generation](/docs/image-generation) and [video](/docs/video).
 </Related>

@@ -1,63 +1,100 @@
 # Generate Object
 
-`generateObject` asks a model for structured output and decodes it into a Swift type.
+`generateObject` asks the model for JSON, strips common markdown fences, validates the JSON against an `AISchema`, and decodes it into your Swift type.
 
-## What it does
+## Define A Schema
 
-Use structured output when your app needs data, not prose. Good examples are extraction, classification, routing decisions, and normalized summaries.
-
-## Why it matters
-
-Typed output turns model responses into normal Swift values. That makes downstream logic easier to test and safer to evolve.
-
-## Before you start
-
-1. Define a `Codable` Swift type.
-
-2. Pick an `Output` shape such as object, array, or enum.
-
-3. Keep fields focused and well named.
-
-## Steps
-
-<Step title="Create a schema type">
-Define the Swift type your application wants.
-</Step>
-
-<Step title="Ask for an object">
-Call `generateObject` with the model, prompt, and output definition.
-</Step>
-
-<Step title="Use the decoded value">
-Use the returned Swift value directly in app logic.
-</Step>
-
-## Example
+Use `AISchemaConvertible` when you want the schema beside the type that will be decoded.
 
 ```swift
-import Swifty_AI
+import SwiftyAI
 
-struct TicketSummary: Codable {
-    let category: String
-    let urgency: String
-    let summary: String
+struct RecipeSummary: Decodable, AISchemaConvertible {
+    let title: String
+    let servings: Int
+    let steps: [String]
+
+    static let aiSchema = AISchema.object(
+        properties: [
+            "title": .string(description: "Short recipe title"),
+            "servings": .integer(description: "Number of servings", minimum: 1),
+            "steps": .array(of: .string(description: "One preparation step"))
+        ]
+    )
 }
-
-let result = try await generateObject(
-    model: model,
-    prompt: "Classify this support ticket: The app crashes on launch.",
-    output: .object(TicketSummary.self)
-)
-
-print(result.object.category)
 ```
 
-## API notes
+## Generate And Decode
 
-Structured output still depends on provider capability and model reliability. Handle schema validation errors and keep prompts direct.
+```swift
+let result = try await generateObject(
+    model: model,
+    prompt: "Turn tomato soup into a simple recipe summary.",
+    output: .object(RecipeSummary.self),
+    options: GenerationOptions(temperature: 0.2)
+)
 
-## Related docs
+print(result.object.title)
+print(result.usage?.totalTokens ?? 0)
+```
+
+The return value is `ObjectResponse<T>`, with the decoded `object`, token `usage`, `finishReason`, and provider `model` when available.
+
+## Manual Output Schema
+
+You can also pass a schema directly. This is useful for dictionaries, arrays, or types you do not own.
+
+```swift
+let output = Output<[String]>.array(
+    String.self,
+    itemSchema: .string(description: "A short risk label")
+)
+
+let labels = try await generateObject(
+    model: model,
+    prompt: "Return three risk labels for a failed payment.",
+    output: output
+)
+
+print(labels.object)
+```
+
+Enums are supported when they are `String` raw-value enums:
+
+```swift
+enum Priority: String, CaseIterable, Decodable {
+    case low
+    case medium
+    case high
+}
+
+let priority = try await generateObject(
+    model: model,
+    prompt: "Classify this ticket: customer cannot log in.",
+    output: .enumeration(Priority.self)
+)
+```
+
+## Stream Partial JSON
+
+`streamObject` is useful when you want to show progress while waiting for a complete object.
+
+```swift
+for try await chunk in streamObject(
+    model: model,
+    prompt: "Create a recipe summary for overnight oats.",
+    output: .object(RecipeSummary.self)
+) {
+    if let final = chunk.object {
+        print("done:", final.title)
+    } else {
+        print(chunk.partialJSON)
+    }
+}
+```
+
+`partialObject` is only set when the accumulated JSON is already decodable. `validationIssues` can help explain why a partial value is not valid yet.
 
 <Related>
-Read [generate text](/docs/generate-text), [generation options](/docs/generation-options), and [multimodal input](/docs/multimodal).
+Use [generation options](/docs/generation-options) to control output length and retries. Use [multimodal input](/docs/multimodal) when the object should be extracted from images, PDFs, or files.
 </Related>

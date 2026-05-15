@@ -1,61 +1,62 @@
 # Message Management
 
-Message management helpers keep conversation history valid and within context limits.
+SwiftyAI uses `ChatMessage` for chat history. A message has a role, text content, optional multimodal parts, an id, and a creation date.
 
-## What it does
-
-The SDK can validate UI messages, convert UI messages to model messages, prune older history, and truncate context with strategies.
-
-## Why it matters
-
-Long chats eventually exceed model context windows. Good pruning preserves the most important messages without breaking role order.
-
-## Before you start
-
-1. Decide which messages must be preserved.
-
-2. Keep system prompts stable.
-
-3. Test edge cases with tiny limits.
-
-## Steps
-
-<Step title="Validate messages">
-Check role order and required content before sending.
-</Step>
-
-<Step title="Prune history">
-Preserve system instructions and the latest user request.
-</Step>
-
-<Step title="Convert for providers">
-Convert app messages into model messages before generation.
-</Step>
-
-## Example
+## Text Messages
 
 ```swift
-import Swifty_AI
-
-let messages: [ChatMessage] = [
-    .system("You are concise."),
-    .user("Explain tool calling."),
-    .assistant("Tool calling lets models request functions."),
-    .user("Show the short version.")
+let messages = [
+    ChatMessage(role: .system, content: "Answer like a support engineer."),
+    ChatMessage(role: .user, content: "Why did my export fail?")
 ]
 
-let pruned = pruneMessages(messages, maxMessages: 3)
-let valid = validateUIMessages(pruned)
-
-print(valid)
+for try await chunk in model.stream(messages: messages) {
+    print(chunk.text, terminator: "")
+}
 ```
 
-## API notes
+Roles are `.system`, `.user`, and `.assistant`.
 
-Use [AIChat](/docs/ai-chat) when you want state management around message history and streaming.
+## Multimodal Messages
 
-## Related docs
+```swift
+let message = ChatMessage(
+    role: .user,
+    parts: [
+        .text("Explain this screenshot."),
+        .imageData(imageData, mediaType: .png, detail: .high)
+    ]
+)
+```
+
+`content` and `parts` stay synchronized. Text-only parts are joined into `content`; setting `content` replaces `parts` with a single `.text` value.
+
+## Built-In Chat Limits
+
+`AIChat` and `SwiftyChat` accept `maxMessages`.
+
+```swift
+let chat = AIChat(
+    model: "openai/gpt-4o-mini",
+    systemPrompt: "Be concise.",
+    maxMessages: 20
+)
+```
+
+The visible message array stays in state, but the history sent to the model is pruned.
+
+## Context Estimates
+
+```swift
+let context = ContextWindow(maxTokens: 16_000)
+
+if context.isNearLimit(for: chat.messages) {
+    print("Consider summarizing older messages.")
+}
+```
+
+The estimator uses a simple character-based approximation and assigns a fixed estimate to non-text parts. It is good for warnings, not exact billing.
 
 <Related>
-Read [AIChat](/docs/ai-chat), [stream text](/docs/stream-text), and [utilities](/docs/utilities).
+Read [AIChat](/docs/ai-chat), [multimodal input](/docs/multimodal), and [utilities](/docs/utilities).
 </Related>

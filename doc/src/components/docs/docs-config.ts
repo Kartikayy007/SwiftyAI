@@ -1,14 +1,11 @@
 import {
   AudioLines,
   Boxes,
-  BrainCircuit,
   Braces,
   Cable,
   Clapperboard,
   Cpu,
   FileText,
-  Gauge,
-  GitBranch,
   Image,
   KeyRound,
   Layers,
@@ -18,7 +15,6 @@ import {
   Radio,
   Route,
   Rows3,
-  ScanSearch,
   Sparkles,
   SquareFunction,
   TextCursorInput,
@@ -53,14 +49,6 @@ export const docsNavGroups = [
     ],
   },
   {
-    title: "Retrieval",
-    items: [
-      { title: "Embeddings", href: "/docs/embeddings", icon: BrainCircuit },
-      { title: "Reranking", href: "/docs/reranking", icon: GitBranch },
-      { title: "Retrieval", href: "/docs/retrieval", icon: ScanSearch },
-    ],
-  },
-  {
     title: "Multimodal and Media",
     items: [
       { title: "Multimodal Input", href: "/docs/multimodal", icon: FileText },
@@ -87,13 +75,6 @@ export const docsNavGroups = [
     ],
   },
   {
-    title: "MCP and Observability",
-    items: [
-      { title: "MCP", href: "/docs/mcp", icon: Cpu },
-      { title: "Telemetry", href: "/docs/telemetry", icon: Gauge },
-    ],
-  },
-  {
     title: "Utilities",
     items: [
       { title: "Utilities", href: "/docs/utilities", icon: Sparkles },
@@ -101,14 +82,4 @@ export const docsNavGroups = [
       { title: "Streaming Utilities", href: "/docs/streaming-utilities", icon: Radio },
     ],
   },
-] as const;
-
-export const pageSections = [
-  "What it does",
-  "Why it matters",
-  "Before you start",
-  "Steps",
-  "Example",
-  "API notes",
-  "Related docs",
 ] as const;

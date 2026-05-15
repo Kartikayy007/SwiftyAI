@@ -1,59 +1,104 @@
 # Tool Calling
 
-Tool calling runs a model, executes requested tools, and continues until the loop finishes.
+`generateWithTools` and `streamWithTools` run a model-tool loop. The model can answer directly, request one or more tools, receive tool results, and continue until a stop condition ends the loop.
 
-## What it does
-
-The SDK supports multi step loops, max step limits, custom stop conditions, approvals, interception, parallel calls, and tool error handling.
-
-## Why it matters
-
-Real agents need more than one model response. They need to inspect state, call functions, evaluate results, and produce a final answer.
-
-## Before you start
-
-1. Create tools with clear schemas.
-
-2. Set `maxSteps` to prevent unbounded loops.
-
-3. Use approvals for actions that mutate data or cost money.
-
-## Steps
-
-<Step title="Define tools">
-Create tools for the actions the model may request.
-</Step>
-
-<Step title="Run the loop">
-Call `generateWithTools` for a final response or a streaming tool API for progress.
-</Step>
-
-<Step title="Control execution">
-Use stop conditions, interception, approval, and telemetry for safety.
-</Step>
-
-## Example
+## One Loop
 
 ```swift
-import Swifty_AI
-
 let result = try await generateWithTools(
     model: model,
-    prompt: "Find the user profile and summarize open tasks.",
-    tools: [profileLookupTool, taskSearchTool],
-    options: GenerationOptions(maxTokens: 800),
-    maxSteps: 4
+    prompt: "Should I bring an umbrella in London today?",
+    tools: [weatherTool],
+    options: GenerationOptions(system: "Use tools when live data is needed."),
+    maxSteps: 4,
+    stopWhen: [isLoopFinished()],
+    onStepFinish: { step in
+        print("step:", step.index)
+        print("tool calls:", step.toolCalls.map(\.name))
+    }
 )
 
 print(result.text)
 ```
 
-## API notes
+`AIStepResult` contains the final text, all steps, usage, finish reason, and `isMaxStepsExceeded`.
 
-Emit user visible progress through [agent UI stream](/docs/agent-ui-stream). Record execution details through [telemetry](/docs/telemetry).
+## Stop Conditions
 
-## Related docs
+`maxSteps` is always enforced. `stopWhen` lets you end earlier.
 
-<Related>
-Read [tools](/docs/tools), [agent UI stream](/docs/agent-ui-stream), [MCP](/docs/mcp), and [telemetry](/docs/telemetry).
-</Related>
+```swift
+let result = try await generateWithTools(
+    model: model,
+    prompt: "Look up the order, then stop before sending any email.",
+    tools: [lookupOrderTool, sendEmailTool],
+    maxSteps: 5,
+    stopWhen: [
+        isLoopFinished(),
+        hasToolCall("send_email"),
+        stepCountIs(3)
+    ]
+)
+```
+
+Important detail: stop conditions are evaluated before tool calls for that step are executed. `hasToolCall("send_email")` can be used as a safety boundary.
+
+For custom logic, create an `AIStopCondition`:
+
+```swift
+let stopOnManyTools = AIStopCondition(name: "tooManyTools") { context in
+    context.step.toolCalls.count > 2
+}
+```
+
+## Stream A Tool Loop
+
+`streamWithTools` yields `AIAgentChunk` values for model text, tool calls, and tool results.
+
+```swift
+let stream = streamWithTools(
+    model: model,
+    prompt: "Find the order status and explain it to the customer.",
+    tools: [lookupOrderTool],
+    onChunk: { chunk in
+        if !chunk.text.isEmpty {
+            print(chunk.text, terminator: "")
+        }
+    },
+    onFinish: { result in
+        print("steps:", result.steps.count)
+    }
+)
+
+for try await chunk in stream {
+    if let call = chunk.toolCall {
+        print("calling:", call.name)
+    }
+    if let result = chunk.toolResult {
+        print("tool returned:", result.name)
+    }
+}
+```
+
+Use [agent UI stream](/docs/agent-ui-stream) when a UI wants higher-level events such as `stepStarted`, `toolCallStarted`, and `agentFinished`.
+
+## Tool Policies
+
+Tool execution can be controlled per loop:
+
+```swift
+let options = ToolExecutionOptions(
+    onToolCall: { call in
+        if call.name == "lookup_order", call.arguments.contains("demo") {
+            return .returnResult(#"{"status":"demo"}"#)
+        }
+        return .execute
+    },
+    onToolResult: { result in
+        print("tool result:", result.name)
+    },
+    errorPolicy: .failFast
+)
+```
+
+`returnErrorResult` keeps the loop alive by sending tool errors back to the model. `failFast` throws immediately.

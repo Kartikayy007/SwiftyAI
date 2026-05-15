@@ -1,36 +1,45 @@
-function PlaceholderDoc({ title }: { title: string }) {
+import Link from "next/link";
+import type { ReactNode } from "react";
+
+function SummaryDoc({
+  title,
+  href,
+  children,
+}: {
+  title: string;
+  href: string;
+  children: ReactNode;
+}) {
   return (
     <>
       <h1>{title}</h1>
-      <p>Docs coming soon.</p>
-
-      <h2 id="overview">Overview</h2>
-      <h2 id="api">API</h2>
-      <h2 id="example">Example</h2>
-      <h2 id="notes">Notes</h2>
+      <p>{children}</p>
+      <p>
+        Open the canonical guide at <Link href={href}>{href}</Link>.
+      </p>
     </>
   );
 }
 
-function doc(title: string) {
+function doc(title: string, href: string, summary: string) {
   return {
     title,
-    content: () => <PlaceholderDoc title={title} />,
+    content: () => (
+      <SummaryDoc title={title} href={href}>
+        {summary}
+      </SummaryDoc>
+    ),
   };
 }
 
 export const docsBySlug = {
-  overview: doc("Overview"),
-  "generate-text": doc("Generate Text"),
-  "stream-text": doc("Stream Text"),
-  tools: doc("Tools"),
-  "generate-object": doc("Generate Object"),
-  embeddings: doc("Embeddings"),
-  reranking: doc("Reranking"),
-  "provider-registry": doc("Provider Registry"),
-  "swiftui-hooks": doc("SwiftUI Hooks"),
-  mcp: doc("MCP"),
-  telemetry: doc("Telemetry"),
+  overview: doc("Overview", "/docs", "SwiftyAI is a Swift SDK for text, streaming, tools, objects, providers, SwiftUI state, media, and utilities."),
+  "generate-text": doc("Generate Text", "/docs/generate-text", "Use generateText for complete model responses with optional usage and finish metadata."),
+  "stream-text": doc("Stream Text", "/docs/stream-text", "Use streamText when UI should update as chunks arrive."),
+  tools: doc("Tools", "/docs/tools", "Define typed or dynamic tools that models can call during agent loops."),
+  "generate-object": doc("Generate Object", "/docs/generate-object", "Decode model output into validated Swift objects."),
+  "provider-registry": doc("Provider Registry", "/docs/provider-registry", "Resolve local custom provider model strings without global state."),
+  "swiftui-hooks": doc("SwiftUI Hooks", "/docs/swiftui-hooks", "Use AIChat and AICompletion for observable SwiftUI state."),
 } as const;
 
 export type DocSlug = keyof typeof docsBySlug;

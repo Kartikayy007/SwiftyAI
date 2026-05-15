@@ -1,51 +1,27 @@
 # Quickstart
 
-Build the smallest useful SwiftyAI flow: configure a model, generate text, stream text, and add one option.
+This page builds the smallest useful flow: configure a model, generate one response, stream one response, and add request options. The same shape is used throughout the SDK.
 
-## What it does
-
-The quickstart proves your provider setup works and gives you the core shape used by most other docs.
-
-## Why it matters
-
-Text generation is the base layer. Tools, objects, hooks, telemetry, and retrieval all build on the same model and options concepts.
-
-## Before you start
-
-1. Finish [installation](/docs/installation).
-
-2. Configure a provider from [provider setup](/docs/provider-setup).
-
-3. Keep live API calls out of unit tests.
-
-## Steps
-
-<Step title="Generate text">
-Call `generateText` when you need the full response before continuing.
-</Step>
-
-<Step title="Stream text">
-Call `streamText` when your app should react to chunks as they arrive.
-</Step>
-
-<Step title="Add options">
-Use `GenerationOptions` for system prompts, temperature, max tokens, stop sequences, and callbacks.
-</Step>
-
-## Example
+## Create A Model
 
 ```swift
-import Swifty_AI
+import SwiftyAI
 
 let model = OpenAICompatibleProvider(
     baseURL: "https://api.openai.com/v1",
     apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
     model: "gpt-4o-mini"
 )
+```
 
+## Generate Text
+
+Use `generateText` when your code needs the full answer before it can continue.
+
+```swift
 let answer = try await generateText(
     model: model,
-    prompt: "What should I know before using Swift concurrency?",
+    prompt: "What should a Swift developer know before using actors?",
     options: GenerationOptions(
         system: "Be practical and concise.",
         temperature: 0.3,
@@ -54,18 +30,44 @@ let answer = try await generateText(
 )
 
 print(answer.text)
+print(answer.usage?.totalTokens ?? 0)
+print(answer.finishReason ?? "unknown")
+```
 
-for try await chunk in streamText(model: model, prompt: "Write a short haiku about Swift.") {
+## Stream Text
+
+Use `streamText` when the UI should update as tokens arrive.
+
+```swift
+var transcript = ""
+
+for try await chunk in streamText(
+    model: model,
+    prompt: "Write a short haiku about Swift concurrency."
+) {
+    transcript += chunk.text
     print(chunk.text, terminator: "")
 }
 ```
 
-## API notes
+The last chunk may include usage and finish reason if the provider sends that metadata.
 
-Use [generation options](/docs/generation-options) for request behavior and [telemetry](/docs/telemetry) when you need observability.
+## Add A Stop Sequence
 
-## Related docs
+Options are passed per request. This keeps default model setup separate from request behavior.
 
-<Related>
-Continue with [generate text](/docs/generate-text), [stream text](/docs/stream-text), and [SwiftUI hooks](/docs/swiftui-hooks).
-</Related>
+```swift
+let response = try await generateText(
+    model: model,
+    prompt: "Return three labels, then write END.",
+    options: GenerationOptions(
+        maxTokens: 120,
+        stopSequences: ["END"],
+        retryPolicy: RetryPolicy(maxAttempts: 3)
+    )
+)
+```
+
+## Next Feature
+
+Once the basic call works, move to [generate object](/docs/generate-object) for typed JSON, [tool calling](/docs/tool-calling) for multi-step work, or [SwiftUI hooks](/docs/swiftui-hooks) for app state.

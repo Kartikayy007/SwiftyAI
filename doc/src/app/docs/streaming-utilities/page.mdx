@@ -1,56 +1,82 @@
 # Streaming Utilities
 
-Streaming utilities help tests and UI layers consume streams consistently.
+The streaming utilities help with previews, tests, and UI pacing. They operate on strings, so they can be used independently from provider streams.
 
-## What it does
-
-`simulateReadableStream` creates a stream from known chunks. `smoothStream` reshapes uneven chunks into steadier output.
-
-## Why it matters
-
-Providers emit chunks at different speeds and sizes. Tests need deterministic streams, and user interfaces often need smoother text updates.
-
-## Before you start
-
-1. Use simulated streams in tests.
-
-2. Use smoothing only when chunk pacing affects experience.
-
-3. Preserve cancellation behavior.
-
-## Steps
-
-<Step title="Simulate a stream">
-Create predictable chunks for tests.
-</Step>
-
-<Step title="Smooth real output">
-Wrap stream chunks when provider output is too bursty.
-</Step>
-
-<Step title="Respect cancellation">
-Stop consuming when the parent task is cancelled.
-</Step>
-
-## Example
+## Simulate A Readable Stream
 
 ```swift
-import Swifty_AI
-
-let stream = simulateReadableStream(["Hello", " ", "world"])
-let smoothed = smoothStream(stream, chunkSize: 3)
-
-for try await chunk in smoothed {
+for try await chunk in simulateReadableStream(
+    "Streaming text without calling a provider.",
+    chunkSize: 8,
+    delay: .milliseconds(60)
+) {
     print(chunk, terminator: "")
 }
 ```
 
-## API notes
+You can also provide exact chunks:
 
-Use [stream text](/docs/stream-text) for provider output and these utilities for shaping or testing that output.
+```swift
+let stream = simulateReadableStream(
+    ["Hello", ", ", "world"],
+    delay: .milliseconds(100)
+)
+```
 
-## Related docs
+This is useful for SwiftUI previews and unit tests that should not make network calls.
+
+## Smooth A Provider Stream
+
+Provider chunks can arrive unevenly. Convert them to strings, then pass them through `smoothStream`.
+
+```swift
+let rawText = AsyncThrowingStream<String, Error> { continuation in
+    Task {
+        do {
+            for try await chunk in streamText(
+                model: model,
+                prompt: "Write a short onboarding paragraph."
+            ) {
+                continuation.yield(chunk.text)
+            }
+            continuation.finish()
+        } catch {
+            continuation.finish(throwing: error)
+        }
+    }
+}
+
+let smooth = smoothStream(
+    rawText,
+    charactersPerChunk: 10,
+    interval: .milliseconds(30)
+)
+
+for try await chunk in smooth {
+    print(chunk, terminator: "")
+}
+```
+
+Smoothing changes UI pacing only. It does not reduce provider latency or token cost.
+
+## Simulate Streaming Middleware
+
+When a model only implements `AIModel`, middleware can turn the final text into chunks:
+
+```swift
+let streamingModel = wrapLanguageModel(
+    model,
+    streamMiddleware: [
+        simulateStreamingMiddleware(
+            chunkSize: 16,
+            delay: .milliseconds(40)
+        )
+    ]
+)
+```
+
+Use this for demos and fallback UI. Real provider streaming is still preferable when available.
 
 <Related>
-Read [stream text](/docs/stream-text), [AIChat](/docs/ai-chat), and [utilities](/docs/utilities).
+Read [stream text](/docs/stream-text) for provider streams and [custom providers](/docs/custom-providers) for middleware wrapping.
 </Related>

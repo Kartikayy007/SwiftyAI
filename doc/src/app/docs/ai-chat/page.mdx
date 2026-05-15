@@ -1,64 +1,74 @@
 # AIChat
 
-`AIChat` manages streaming chat state for Swift apps.
+`AIChat` is a `@MainActor` and `@Observable` chat state object. It manages input, messages, loading state, errors, cancellation, and streaming assistant updates.
 
-## What it does
-
-It stores messages, input, loading state, errors, and an internal task. It appends user messages optimistically and streams assistant text into the message list.
-
-## Why it matters
-
-Chat needs careful cancellation and state transitions. `AIChat` gives apps the behavior while leaving the visual layer entirely yours.
-
-## Before you start
-
-1. Use a model that supports message streaming.
-
-2. Decide whether to include a system prompt.
-
-3. Render `messages` in your own UI.
-
-## Steps
-
-<Step title="Create AIChat">
-Initialize it on the main actor.
-</Step>
-
-<Step title="Set input and send">
-Assign `input`, then call `send`.
-</Step>
-
-<Step title="Cancel or reset">
-Use `stop` for the current response and `reset` for all state.
-</Step>
-
-## Example
+## State Model
 
 ```swift
-import SwiftUI
-import Swifty_AI
+@State private var chat = AIChat(
+    model: "openai/gpt-4o-mini",
+    systemPrompt: "You are a helpful support assistant.",
+    maxMessages: 30,
+    options: GenerationOptions(temperature: 0.3)
+)
+```
 
-@MainActor
-func runChat(chat: AIChat) {
-    chat.input = "Explain streamText in one paragraph."
-    chat.send()
+The public state is:
 
-    if chat.isLoading {
-        print("Waiting for assistant response")
-    }
+- `messages: [ChatMessage]`
+- `input: String`
+- `isLoading: Bool`
+- `error: Error?`
 
-    for message in chat.messages {
-        print("\(message.role): \(message.content)")
+## Sending
+
+```swift
+chat.input = "How do I reset my API key?"
+chat.send()
+```
+
+`send()` ignores empty input and ignores duplicate sends while a stream is already running. It clears `input`, appends the user message, appends an empty assistant message, then fills that assistant message as chunks arrive.
+
+## View Example
+
+```swift
+struct SupportChatView: View {
+    @State private var chat = AIChat(model: "openai/gpt-4o-mini")
+
+    var body: some View {
+        VStack {
+            ScrollView {
+                LazyVStack(alignment: .leading) {
+                    ForEach(chat.messages) { message in
+                        Text(message.content)
+                            .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
+                    }
+                }
+            }
+
+            HStack {
+                TextField("Ask support", text: $chat.input)
+                Button(chat.isLoading ? "Stop" : "Send") {
+                    chat.isLoading ? chat.stop() : chat.send()
+                }
+            }
+
+            if let error = chat.error {
+                Text(error.localizedDescription)
+                    .foregroundStyle(.red)
+            }
+        }
     }
 }
 ```
 
-## API notes
+## Reset And Limits
 
-`AIChat` preserves structured chat history instead of flattening messages into one prompt.
+`reset()` cancels any active stream, clears messages, clears input, and clears the error. `maxMessages` prunes the history sent to the model, while keeping the visible `messages` array as app state.
 
-## Related docs
+```swift
+chat.stop()
+chat.reset()
+```
 
-<Related>
-Read [SwiftUI hooks](/docs/swiftui-hooks), [stream text](/docs/stream-text), and [agent UI stream](/docs/agent-ui-stream).
-</Related>
+Use `maxMessages` for simple chat apps. For advanced token budgeting, combine manual history management with `ContextWindow`.

@@ -1,61 +1,64 @@
 # Local Models
 
-Local models run on the user machine or Apple platform instead of a remote API.
+Local models are usually exposed through an OpenAI-compatible endpoint. Ollama works with SwiftyAI through the same `OpenAICompatibleProvider` used for hosted compatible APIs.
 
-## What it does
+## Direct Ollama Provider
 
-SwiftyAI supports local provider surfaces such as Ollama and Apple Foundation Models where available.
-
-## Why it matters
-
-Local models can reduce cost, improve privacy, support offline workflows, and create faster development loops.
-
-## Before you start
-
-1. Check device and operating system support.
-
-2. Verify the local runtime is installed or available.
-
-3. Keep cloud fallback behavior explicit.
-
-## Steps
-
-<Step title="Use Ollama for local Mac development">
-Run an Ollama model locally and point the provider at it.
-</Step>
-
-<Step title="Use Apple Foundation Models where available">
-Check availability before calling the provider.
-</Step>
-
-<Step title="Route sensitive prompts locally">
-Use local providers for private or offline flows.
-</Step>
-
-## Example
+Start Ollama locally, pull a model, then point SwiftyAI at the local API:
 
 ```swift
-import Swifty_AI
-
-let local = OllamaProvider(
-    model: "llama3.2",
-    baseURL: "http://localhost:11434/v1"
+let local = OpenAICompatibleProvider(
+    baseURL: "http://localhost:11434/v1",
+    apiKey: "ollama",
+    model: "llama3.2"
 )
 
 let response = try await generateText(
     model: local,
-    prompt: "Draft a private note summary without sending data to the cloud."
+    prompt: "Summarize this README in two sentences."
 )
-
-print(response.text)
 ```
 
-## API notes
+The API key value is not used by Ollama, but the OpenAI-compatible adapter still expects a string.
 
-Local model quality and capability vary by model. Keep feature fallbacks visible and test behavior on real target devices.
+## Model String Setup
 
-## Related docs
+```swift
+AI.configure { ai in
+    ai.ollama(baseURL: "http://localhost:11434/v1")
+}
 
-<Related>
-Read [providers](/docs/providers), [provider registry](/docs/provider-registry), and [generation options](/docs/generation-options).
-</Related>
+let response = try await generateText(
+    model: "ollama/llama3.2",
+    prompt: "Draft a short local-only privacy note."
+)
+```
+
+Configure this during app startup before user-driven requests.
+
+## Streaming Locally
+
+```swift
+for try await chunk in streamText(
+    model: local,
+    prompt: "Write a short note while streaming."
+) {
+    print(chunk.text, terminator: "")
+}
+```
+
+Local models can be slower and may emit different metadata from hosted APIs. Treat `usage` and `finishReason` as optional.
+
+## Private Gateways
+
+Any local or private service with an OpenAI-compatible chat endpoint can use the same provider.
+
+```swift
+let gateway = OpenAICompatibleProvider(
+    baseURL: "http://localhost:8080/v1",
+    apiKey: gatewayToken,
+    model: "team/default"
+)
+```
+
+If the gateway supports tools or media endpoints, the matching SwiftyAI APIs can use it.
