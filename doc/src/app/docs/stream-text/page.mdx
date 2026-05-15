@@ -1,70 +1,79 @@
 # Stream Text
 
-`streamText` returns chunks as the model generates them.
+`streamText` returns an `AsyncThrowingStream<AIStreamChunk, Error>`. Each chunk contains text and may include usage or finish reason when the provider emits final metadata.
 
-## What it does
-
-Streaming lets you update logs, command line output, SwiftUI state, or an app level transcript while the provider is still responding.
-
-## Why it matters
-
-Long model calls feel faster when the first token appears quickly. Streaming also unlocks progress events and richer tool flows through [agent UI stream](/docs/agent-ui-stream).
-
-## Before you start
-
-1. Use a model that conforms to the streaming protocol.
-
-2. Handle thrown errors around the async sequence.
-
-3. Decide whether to collect chunks into a final string.
-
-## Steps
-
-<Step title="Create the stream">
-Call `streamText` with a model, prompt, and optional callbacks.
-</Step>
-
-<Step title="Consume chunks">
-Loop with `for try await` and render non empty `chunk.text`.
-</Step>
-
-<Step title="Record completion">
-Use `onFinish` when you need one final `AIResponse`.
-</Step>
-
-## Example
+## Basic Stream
 
 ```swift
-import Swifty_AI
-
-let model = OpenAICompatibleProvider(
-    baseURL: "https://api.openai.com/v1",
-    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
-    model: "gpt-4o-mini"
-)
-
-var finalText = ""
+var output = ""
 
 for try await chunk in streamText(
     model: model,
-    prompt: "Write a concise release note for embeddings support.",
-    onChunk: { chunk in
-        print(chunk.text, terminator: "")
-    },
-    onFinish: { response in
-        print("\nFinished with \(response.finishReason ?? "unknown")")
-    }
+    prompt: "Write a calm loading message for a finance dashboard."
 ) {
-    finalText += chunk.text
+    output += chunk.text
 }
 ```
 
-## API notes
+Use this in SwiftUI by appending chunks to `@State`, an `@Observable` view model, or the built-in `AIChat` helper.
 
-Streams can include final usage information when providers expose it. Use [streaming utilities](/docs/streaming-utilities) to smooth or simulate streams.
+## Callbacks
 
-## Related docs
+Callbacks are useful when you want side effects without moving all work into the `for await` loop.
+
+```swift
+let stream = streamText(
+    model: model,
+    prompt: "Generate a three-line release summary.",
+    onChunk: { chunk in
+        print("chunk:", chunk.text)
+    },
+    onFinish: { response in
+        print("tokens:", response.usage?.totalTokens ?? 0)
+        print("finish:", response.finishReason ?? "unknown")
+    }
+)
+
+for try await chunk in stream {
+    print(chunk.text, terminator: "")
+}
+```
+
+`onFinish` receives the accumulated `AIResponse`.
+
+## Cancellation
+
+There is no separate abort object. Use normal Swift task cancellation.
+
+```swift
+let task = Task {
+    for try await chunk in streamText(model: model, prompt: "Write a long story.") {
+        print(chunk.text, terminator: "")
+    }
+}
+
+task.cancel()
+```
+
+Provider requests and local stream helpers check cancellation as they yield.
+
+## Streaming Chat History
+
+Streaming models also support chat history:
+
+```swift
+let messages = [
+    ChatMessage(role: .system, content: "Answer like a concise support engineer."),
+    ChatMessage(role: .user, content: "Why did my export fail?")
+]
+
+for try await chunk in model.stream(messages: messages) {
+    print(chunk.text, terminator: "")
+}
+```
+
+Use [message management](/docs/message-management) when history needs pruning.
 
 <Related>
-Read [SwiftUI hooks](/docs/swiftui-hooks), [AIChat](/docs/ai-chat), [agent UI stream](/docs/agent-ui-stream), and [telemetry](/docs/telemetry).
+For UI state, read [AIChat](/docs/ai-chat). For simulated or smoothed streams, read [streaming utilities](/docs/streaming-utilities).
 </Related>

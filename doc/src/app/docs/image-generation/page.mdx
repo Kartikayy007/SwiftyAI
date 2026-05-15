@@ -1,61 +1,68 @@
 # Image Generation
 
-Image generation turns a text prompt into image data or provider hosted images.
+`generateImage` calls an image-capable provider and returns an `ImageResponse`. Each generated image can contain `data`, `base64`, a hosted `url`, a `mediaType`, and an optional revised prompt.
 
-## What it does
-
-SwiftyAI exposes image model protocols and `generateImage` style helpers for providers that support image creation.
-
-## Why it matters
-
-Apps often need generated thumbnails, mockups, illustrations, or creative variations without hardwiring one provider.
-
-## Before you start
-
-1. Choose an image capable model.
-
-2. Decide size, quality, and output format.
-
-3. Store generated media according to your app requirements.
-
-## Steps
-
-<Step title="Create an image model">
-Use an OpenAI compatible image provider or Gemini image provider.
-</Step>
-
-<Step title="Send a prompt">
-Describe the image clearly and pass size or quality options when needed.
-</Step>
-
-<Step title="Persist the result">
-Write returned data to storage or show it in your app layer.
-</Step>
-
-## Example
+## Generate An Image
 
 ```swift
-import Swifty_AI
+let imageModel = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-image-1"
+)
 
-let image = try await generateImage(
+let response = try await generateImage(
     model: imageModel,
-    prompt: "A clean app icon for a Swift AI SDK, black background, orange accent",
+    prompt: "A clean app icon for a Swift package named SwiftyAI.",
     options: ImageGenerationOptions(
-        size: "1024x1024",
-        quality: "standard"
+        count: 1,
+        size: .square1024,
+        quality: .high,
+        format: .png
     )
 )
 
-print(image.mediaType)
-print(image.data.count)
+let firstImage = response.images.first
+let imageData = firstImage?.data
 ```
 
-## API notes
+The provider chooses whether it returns bytes, base64, or a URL.
 
-Use image middleware when you need to rewrite prompts or enforce generation defaults before requests reach the provider.
+## Registry Form
 
-## Related docs
+After app startup configuration, you can use model strings:
 
-<Related>
-Read [multimodal input](/docs/multimodal), [providers](/docs/providers), and [generation options](/docs/generation-options).
-</Related>
+```swift
+let response = try await generateImage(
+    model: "openai/gpt-image-1",
+    prompt: "A product screenshot background for a SwiftAI demo.",
+    options: ImageGenerationOptions(
+        size: .landscape1536x1024,
+        background: .opaque
+    )
+)
+```
+
+## Gemini Images
+
+Gemini media models use the same SDK function:
+
+```swift
+let gemini = GeminiProvider(
+    apiKey: ProcessInfo.processInfo.environment["GEMINI_API_KEY"]!,
+    model: "gemini-image-model"
+)
+
+let response = try await generateImage(
+    model: gemini,
+    prompt: "A simple diagram showing prompt, model, and response."
+)
+```
+
+Use the model name your provider account supports.
+
+## Options
+
+`ImageGenerationOptions` supports `count`, `size`, `quality`, `format`, `background`, `compression`, `aspectRatio`, `personGeneration`, per-request `headers`, and `retryPolicy`.
+
+Some options are provider-specific. Passing an option that a provider does not support may be ignored or rejected by that provider.

@@ -1,63 +1,108 @@
 # Generation Options
 
-`GenerationOptions` controls request behavior across text generation, streaming, and tool loops.
-
-## What it does
-
-Options let you set system behavior, randomness, length, stopping rules, penalties, callbacks, prompt caching, and telemetry where supported.
-
-## Why it matters
-
-Production AI features need predictable knobs. A system prompt shapes behavior, max tokens prevents runaway output, and callbacks connect model events to your app.
-
-## Before you start
-
-1. Check which options your provider supports.
-
-2. Keep defaults simple until product behavior requires tuning.
-
-3. Prefer low temperature for deterministic workflows.
-
-## Steps
-
-<Step title="Start with a system prompt">
-Use `system` to describe the assistant role or business constraints.
-</Step>
-
-<Step title="Tune generation">
-Use `temperature`, `topP`, `maxTokens`, penalties, and stop sequences.
-</Step>
-
-<Step title="Attach callbacks">
-Use `onChunk` and `onFinish` for streaming side effects.
-</Step>
-
-## Example
+`GenerationOptions` is the request-level configuration object for text, streaming, structured output, and tool loops.
 
 ```swift
-import Swifty_AI
-
 let options = GenerationOptions(
-    system: "You are a concise Swift SDK documentation assistant.",
+    system: "Answer as a careful Swift reviewer.",
     temperature: 0.2,
     topP: 0.9,
-    maxTokens: 400,
-    stopSequences: ["END"]
-)
-
-let response = try await generateText(
-    model: model,
-    prompt: "Explain when to use streamText.",
-    options: options
+    maxTokens: 600,
+    stopSequences: ["</answer>"],
+    headers: ["X-Request-ID": requestID],
+    retryPolicy: RetryPolicy(maxAttempts: 3)
 )
 ```
 
-## API notes
+## Prompt And Sampling
 
-Some providers ignore unsupported options. OpenAI compatible models do not use `topK`, while Anthropic and Gemini expose different system prompt shapes behind the SDK.
+Use these fields to shape the model response:
 
-## Related docs
+- `system`: instruction prepended as the system message when the provider supports it.
+- `temperature`: randomness. Lower values are more deterministic.
+- `topP`: nucleus sampling.
+- `topK`: candidate cap for providers that expose it.
+- `maxTokens`: output token budget.
+- `seed`: deterministic hint for providers that support seeded generation.
+- `presencePenalty`: discourages repeating existing topics.
+- `frequencyPenalty`: discourages repeating the same tokens.
+- `stopSequences`: strings that stop generation.
 
-<Related>
-Read [generate text](/docs/generate-text), [stream text](/docs/stream-text), and [telemetry](/docs/telemetry).
-</Related>
+```swift
+let response = try await generateText(
+    model: model,
+    prompt: "Suggest five concise commit messages.",
+    options: GenerationOptions(
+        system: "Return only a numbered list.",
+        temperature: 0.4,
+        maxTokens: 180,
+        stopSequences: ["6."]
+    )
+)
+```
+
+Provider support varies. Unsupported controls are ignored by providers that do not expose matching parameters.
+
+## Headers And Retries
+
+Per-request headers are useful for request ids, beta flags, or provider-specific routing. Retries are opt-in.
+
+```swift
+let response = try await generateText(
+    model: model,
+    prompt: "Summarize this incident report.",
+    options: GenerationOptions(
+        headers: [
+            "X-Request-ID": requestID,
+            "X-Feature": "incident-summary"
+        ],
+        retryPolicy: RetryPolicy(
+            maxAttempts: 4,
+            baseDelay: .milliseconds(300),
+            retryableStatusCodes: [429, 500, 502, 503, 504]
+        )
+    )
+)
+```
+
+`RetryPolicy.none` is the default and means one attempt.
+
+## Prompt Caching
+
+`PromptCachingOptions` carries cache hints for providers that support prompt caching.
+
+```swift
+let options = GenerationOptions(
+    system: "Use the product manual as reference.",
+    promptCaching: PromptCachingOptions(
+        cacheKey: "manual-v4",
+        retention: "ephemeral"
+    )
+)
+```
+
+SwiftyAI passes the intent through the provider layer. The provider decides whether the cache key, retention, or cached content fields map to its API.
+
+## Defaults With Middleware
+
+If one model should always receive the same defaults, wrap it instead of repeating options at every call.
+
+```swift
+let wrapped = wrapLanguageModel(
+    model,
+    middleware: [
+        defaultSettingsMiddleware(
+            system: "Answer in the product team's voice.",
+            temperature: 0.3,
+            maxTokens: 400
+        )
+    ]
+)
+
+let response = try await generateText(
+    model: wrapped,
+    prompt: "Explain workspace sharing."
+)
+```
+
+Per-request values override middleware defaults.

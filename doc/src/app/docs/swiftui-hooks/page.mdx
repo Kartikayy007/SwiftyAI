@@ -1,63 +1,87 @@
 # SwiftUI Hooks
 
-SwiftUI hooks are SDK state APIs for building AI features in Swift apps without shipping prebuilt views.
+SwiftyAI includes two observable state helpers for SwiftUI apps:
 
-## What it does
+- `AIChat` for multi-turn chat with streaming assistant messages.
+- `AICompletion` for a single prompt and a single generated output.
 
-`AIChat` and `AICompletion` are observable, main actor state types with synchronous `send`, `stop`, and `reset` methods.
+They are state objects, not UI kits. You still build the view.
 
-## Why it matters
-
-SwiftUI apps need state, cancellation, loading flags, errors, and optimistic updates. The hooks provide that behavior while leaving visual design to your app.
-
-## Before you start
-
-1. Choose a streaming model for chat.
-
-2. Choose a text model for completion.
-
-3. Keep state objects owned by your view or view model.
-
-## Steps
-
-<Step title="Create state">
-Initialize `AIChat` or `AICompletion` with a model or registry string.
-</Step>
-
-<Step title="Bind input">
-Connect `input` or `prompt` to your own controls.
-</Step>
-
-<Step title="Send and stop">
-Call `send` synchronously and `stop` when the user cancels.
-</Step>
-
-## Example
+## Chat State
 
 ```swift
 import SwiftUI
-import Swifty_AI
+import SwiftyAI
 
-@Observable
-@MainActor
-final class AssistantState {
-    let chat = AIChat(
-        model: OpenAICompatibleProvider(
-            baseURL: "https://api.openai.com/v1",
-            apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
-            model: "gpt-4o-mini"
-        ),
-        systemPrompt: "Be concise."
+struct ChatView: View {
+    @State private var chat = AIChat(
+        model: "openai/gpt-4o-mini",
+        systemPrompt: "Be concise.",
+        maxMessages: 20
     )
+
+    var body: some View {
+        VStack {
+            List(chat.messages) { message in
+                Text(message.content)
+            }
+
+            HStack {
+                TextField("Message", text: $chat.input)
+                Button("Send") {
+                    chat.send()
+                }
+                .disabled(chat.isLoading || chat.input.isEmpty)
+            }
+        }
+    }
 }
 ```
 
-## API notes
+`AIChat` appends the user message immediately, streams into an assistant message, exposes `isLoading`, stores `error`, and supports `stop()` and `reset()`.
 
-These are state APIs only. Use your own SwiftUI views and design system.
+## Completion State
 
-## Related docs
+```swift
+struct CompletionView: View {
+    @State private var completion = AICompletion(
+        model: "openai/gpt-4o-mini",
+        options: GenerationOptions(temperature: 0.4)
+    )
+
+    var body: some View {
+        VStack {
+            TextEditor(text: $completion.input)
+
+            Button("Generate") {
+                completion.send()
+            }
+            .disabled(completion.isLoading)
+
+            Text(completion.output)
+        }
+    }
+}
+```
+
+`AICompletion` also exposes `prompt` and `completion` aliases for `input` and `output`.
+
+## Direct Models
+
+Both helpers also accept direct model instances:
+
+```swift
+let model = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: openAIKey,
+    model: "gpt-4o-mini"
+)
+
+let chat = AIChat(model: model, systemPrompt: "Answer as support.")
+```
+
+Use direct models when previews or tests should not depend on global `AI.configure` state.
 
 <Related>
-Read [AIChat](/docs/ai-chat), [AICompletion](/docs/ai-completion), and [stream text](/docs/stream-text).
+Read [AIChat](/docs/ai-chat) and [AICompletion](/docs/ai-completion) for dedicated examples.
 </Related>

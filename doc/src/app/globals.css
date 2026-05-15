@@ -144,15 +144,39 @@
     @apply leading-7;
   }
 
-  .docs-content code {
+  .docs-content :not(pre) > code {
     @apply rounded-md bg-muted px-1.5 py-0.5 font-mono text-sm text-foreground;
   }
 
-  .docs-content pre {
-    @apply my-6 overflow-x-auto rounded-lg border bg-black p-4 text-sm text-white;
+  .docs-content figure[data-rehype-pretty-code-figure] {
+    @apply my-6 overflow-hidden rounded-lg border bg-muted/40;
   }
 
-  .docs-content pre code {
-    @apply bg-transparent p-0 text-white;
+  .docs-content figure[data-rehype-pretty-code-figure] > .group {
+    @apply relative;
+  }
+
+  .docs-content figure[data-rehype-pretty-code-figure] pre {
+    @apply m-0 overflow-x-auto bg-transparent p-4 text-sm leading-6;
+  }
+
+  .docs-content figure[data-rehype-pretty-code-figure] code {
+    @apply grid min-w-full bg-transparent p-0 font-mono text-sm;
+  }
+
+  .docs-content figure[data-rehype-pretty-code-figure] [data-line] {
+    @apply min-h-6 px-0;
+  }
+
+  :root:not(.dark) .docs-content figure[data-rehype-pretty-code-figure] span {
+    color: var(--shiki-light);
+  }
+
+  .dark .docs-content figure[data-rehype-pretty-code-figure] span {
+    color: var(--shiki-dark);
+  }
+
+  .docs-content figure[data-rehype-pretty-code-figure] [data-highlighted-line] {
+    @apply -mx-4 border-l-2 border-[var(--swift-orange)] bg-orange-500/10 px-4;
   }
 }

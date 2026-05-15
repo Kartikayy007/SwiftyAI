@@ -1,65 +1,85 @@
 # Provider Registry
 
-The provider registry resolves model strings into concrete model instances.
+`ProviderRegistry` is a local resolver for custom model strings. It is separate from `AI.configure`, so it works well in tests, previews, multi-tenant apps, and libraries that should not touch shared global state.
 
-## What it does
-
-Use `createProviderRegistry` and `customProvider` to centralize provider setup, model lookup, and modality specific resolution.
-
-## Why it matters
-
-Registry strings keep application features portable. A feature can ask for `"openai/gpt-4o-mini"` or `"gemini/gemini-2.5-flash"` without constructing providers at every call site.
-
-## Before you start
-
-1. Configure the providers your app supports.
-
-2. Decide which models are available for text, streaming, tools, embeddings, reranking, and media.
-
-3. Keep the global registry separate from test registries.
-
-## Steps
-
-<Step title="Create a registry">
-Build one registry during app setup.
-</Step>
-
-<Step title="Register providers">
-Add built in provider factories and custom providers.
-</Step>
-
-<Step title="Resolve by capability">
-Use the text, stream, embedding, image, or rerank resolver that matches the feature.
-</Step>
-
-## Example
+## Register Models By Capability
 
 ```swift
-import Swifty_AI
+let registry = createProviderRegistry([
+    "demo": customProvider(
+        languageModels: [
+            "summary": summaryModel
+        ],
+        streamModels: [
+            "chat": chatModel
+        ],
+        toolCallingModels: [
+            "agent": agentModel
+        ],
+        imageModels: [
+            "image": imageModel
+        ],
+        transcriptionModels: [
+            "transcribe": transcriptionModel
+        ],
+        speechModels: [
+            "speech": speechModel
+        ],
+        videoModels: [
+            "video": videoModel
+        ]
+    )
+])
+```
 
-let registry = createProviderRegistry {
-    customProvider("docs") { modelID in
-        OpenAICompatibleProvider(
-            baseURL: "https://api.openai.com/v1",
-            apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
-            model: modelID
-        )
-    }
-}
+The provider id is the part before the slash. The model id is the part after it.
 
+## Use Registry Helpers
+
+```swift
 let response = try await generateText(
+    model: "demo/summary",
     registry: registry,
-    model: "docs/gpt-4o-mini",
-    prompt: "Write a release note for provider registry support."
+    prompt: "Summarize this support ticket."
 )
 ```
 
-## API notes
+Streaming and tool helpers follow the same pattern:
 
-Use direct providers for isolated examples and registry strings for larger apps with routing, user settings, or multiple providers.
+```swift
+for try await chunk in streamText(
+    model: "demo/chat",
+    registry: registry,
+    prompt: "Write a typing indicator message."
+) {
+    print(chunk.text, terminator: "")
+}
+```
 
-## Related docs
+```swift
+let result = try await generateWithTools(
+    model: "demo/agent",
+    registry: registry,
+    prompt: "Look up the order and explain the status.",
+    tools: [lookupOrderTool]
+)
+```
+
+## Resolve Manually
+
+Manual resolution is useful when you need to pass a model into another object.
+
+```swift
+let streamModel = try registry.streamModel("demo/chat")
+let chat = AIChat(model: streamModel, systemPrompt: "Be brief.")
+```
+
+Resolution methods are capability-specific: `model`, `languageModel`, `streamModel`, `toolCallingModel`, `imageModel`, `transcriptionModel`, `speechModel`, and `videoModel`.
+
+## Error Behavior
+
+The registry validates model strings and capabilities. `"demo"` is invalid because it has no slash. `"missing/chat"` throws provider-not-configured. `"demo/image"` throws unsupported-feature if you ask for it as a stream model.
 
 <Related>
-Read [providers](/docs/providers), [custom providers](/docs/custom-providers), and [provider setup](/docs/provider-setup).
+Use [custom providers](/docs/custom-providers) to build models and [provider setup](/docs/provider-setup) for built-in provider configuration.
 </Related>
