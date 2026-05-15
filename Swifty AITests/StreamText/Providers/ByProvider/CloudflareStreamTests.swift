@@ -62,11 +62,15 @@ final class CloudflareStreamTests: XCTestCase {
         var lastChunk: AIStreamChunk?
         var chunkCount = 0
         print("[Cloudflare stream] starting...")
-        for try await chunk in live.stream("Say hi in one sentence") {
-            full += chunk.text
-            chunkCount += 1
-            print("[Cloudflare chunk \(chunkCount)] \"\(chunk.text)\"")
-            lastChunk = chunk
+        do {
+            for try await chunk in live.stream("Say hi in one sentence") {
+                full += chunk.text
+                chunkCount += 1
+                print("[Cloudflare chunk \(chunkCount)] \"\(chunk.text)\"")
+                lastChunk = chunk
+            }
+        } catch {
+            try skipLiveProviderError(error, provider: "Cloudflare")
         }
         print("[Cloudflare stream] done — \(chunkCount) chunks, full response: \"\(full)\"")
         if let reason = lastChunk?.finishReason { print("[Cloudflare stream] finish reason: \(reason)") }

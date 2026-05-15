@@ -1,0 +1,64 @@
+# AIChat
+
+`AIChat` manages streaming chat state for Swift apps.
+
+## What it does
+
+It stores messages, input, loading state, errors, and an internal task. It appends user messages optimistically and streams assistant text into the message list.
+
+## Why it matters
+
+Chat needs careful cancellation and state transitions. `AIChat` gives apps the behavior while leaving the visual layer entirely yours.
+
+## Before you start
+
+1. Use a model that supports message streaming.
+
+2. Decide whether to include a system prompt.
+
+3. Render `messages` in your own UI.
+
+## Steps
+
+<Step title="Create AIChat">
+Initialize it on the main actor.
+</Step>
+
+<Step title="Set input and send">
+Assign `input`, then call `send`.
+</Step>
+
+<Step title="Cancel or reset">
+Use `stop` for the current response and `reset` for all state.
+</Step>
+
+## Example
+
+```swift
+import SwiftUI
+import Swifty_AI
+
+@MainActor
+func runChat(chat: AIChat) {
+    chat.input = "Explain streamText in one paragraph."
+    chat.send()
+
+    if chat.isLoading {
+        print("Waiting for assistant response")
+    }
+
+    for message in chat.messages {
+        print("\(message.role): \(message.content)")
+    }
+}
+```
+
+## API notes
+
+`AIChat` preserves structured chat history instead of flattening messages into one prompt.
+
+## Related docs
+
+<Related>
+Read [SwiftUI hooks](/docs/swiftui-hooks), [stream text](/docs/stream-text), and [agent UI stream](/docs/agent-ui-stream).
+</Related>

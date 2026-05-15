@@ -1,0 +1,56 @@
+# Streaming Utilities
+
+Streaming utilities help tests and UI layers consume streams consistently.
+
+## What it does
+
+`simulateReadableStream` creates a stream from known chunks. `smoothStream` reshapes uneven chunks into steadier output.
+
+## Why it matters
+
+Providers emit chunks at different speeds and sizes. Tests need deterministic streams, and user interfaces often need smoother text updates.
+
+## Before you start
+
+1. Use simulated streams in tests.
+
+2. Use smoothing only when chunk pacing affects experience.
+
+3. Preserve cancellation behavior.
+
+## Steps
+
+<Step title="Simulate a stream">
+Create predictable chunks for tests.
+</Step>
+
+<Step title="Smooth real output">
+Wrap stream chunks when provider output is too bursty.
+</Step>
+
+<Step title="Respect cancellation">
+Stop consuming when the parent task is cancelled.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let stream = simulateReadableStream(["Hello", " ", "world"])
+let smoothed = smoothStream(stream, chunkSize: 3)
+
+for try await chunk in smoothed {
+    print(chunk, terminator: "")
+}
+```
+
+## API notes
+
+Use [stream text](/docs/stream-text) for provider output and these utilities for shaping or testing that output.
+
+## Related docs
+
+<Related>
+Read [stream text](/docs/stream-text), [AIChat](/docs/ai-chat), and [utilities](/docs/utilities).
+</Related>

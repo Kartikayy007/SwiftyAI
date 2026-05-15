@@ -1,10 +1,10 @@
 # ``Swifty_AI``
 
-Provider-agnostic AI SDK for Apple platforms. Zero mandatory dependencies.
+A provider-agnostic AI SDK for Apple platforms, with zero mandatory dependencies.
 
 ## Overview
 
-Configure once, use everywhere — no API key at every call site.
+Configure once and use it everywhere, with no API key needed at every call site.
 
 ```swift
 // AppDelegate / @main — once
@@ -18,7 +18,7 @@ let response = try await generateText(model: "openai/gpt-4o-mini", prompt: "Expl
 print(response.text)
 ```
 
-Or pass a provider directly — both styles work:
+You can also pass a provider directly. Both styles work:
 
 ```swift
 let response = try await generateText(
@@ -31,10 +31,10 @@ let response = try await generateText(
 
 ## AI.configure (Registry)
 
-Set API keys once at startup. Then use model strings (`"provider/model"`) everywhere — no key at call sites.
+Set API keys once at startup, then use model strings (`"provider/model"`) everywhere. You do not need to pass keys at each call site.
 
 ```swift
-// In AppDelegate, @main body, or app init
+// In AppDelegate, @main, or your app initializer
 AI.configure {
     $0.openAI(apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!)
     $0.anthropic(apiKey: "sk-ant-...")
@@ -78,7 +78,7 @@ let movie: Movie = try await generateObject(model: "gemini/gemini-2.5-flash", pr
 let chat = SwiftyChat(model: "groq/llama-3.3-70b-versatile", systemPrompt: "Be helpful.")
 ```
 
-### Error handling for registry
+### Registry error handling
 
 ```swift
 do {
@@ -92,19 +92,81 @@ do {
 
 ---
 
+## ProviderRegistry (Custom Providers)
+
+Use ``ProviderRegistry`` when you need explicit custom provider resolution for mocks,
+local models, or proprietary backends. Custom registries are separate from
+``AI/configure(_:)`` and do not modify global string resolution.
+
+```swift
+struct LocalModel: AIModel {
+    func generate(_ prompt: String) async throws -> AIResponse {
+        AIResponse(text: "local: \(prompt)", model: "local-chat")
+    }
+}
+
+let registry = createProviderRegistry([
+    "local": customProvider(
+        languageModels: ["chat": LocalModel()]
+    )
+])
+
+let response = try await generateText(
+    model: "local/chat",
+    registry: registry,
+    prompt: "Hello"
+)
+```
+
+Register models by modality:
+
+```swift
+let registry = createProviderRegistry([
+    "mock": customProvider(
+        languageModels: ["chat": chatModel],
+        streamModels: ["stream": streamingModel],
+        toolCallingModels: ["tools": toolModel],
+        imageModels: ["image": imageModel],
+        transcriptionModels: ["transcribe": transcriptionModel],
+        speechModels: ["speech": speechModel],
+        videoModels: ["video": videoModel],
+        embeddingModels: ["embed": embeddingModel],
+        rerankModels: ["rerank": rerankModel]
+    )
+])
+```
+
+Resolve strings directly when you want to pass the model yourself:
+
+```swift
+let model = try registry.streamModel("mock/stream")
+for try await chunk in streamText(model: model, prompt: "Stream this") {
+    print(chunk.text, terminator: "")
+}
+```
+
+Custom registry strings use the same `"provider/model-name"` format as
+``AI/configure(_:)``. Provider ids are matched exactly against the keys passed to
+``createProviderRegistry(_:)``. Unknown providers throw
+``AIError/providerNotConfigured(_:)``; missing models or wrong modality lookups
+throw ``AIError/unsupportedFeature(_:)``.
+
+---
+
 ## Core Types
 
 ### AIModel
 
-The protocol every provider conforms to. You rarely use this directly — use the factory methods instead.
+The protocol that every provider conforms to. You rarely need to use this directly; use the factory methods instead.
 
 ```swift
 public protocol AIModel: Sendable {
     func generate(_ prompt: String) async throws -> AIResponse
+    func generate(_ prompt: [AIMessageContent], options: GenerationOptions) async throws -> AIResponse
 }
 ```
 
-You can also conform your own type to `AIModel` for mocking or custom backends:
+You can also make your own type conform to `AIModel` for mocks or custom backends:
 
 ```swift
 struct MyMockModel: AIModel {
@@ -116,7 +178,7 @@ struct MyMockModel: AIModel {
 
 ### AIResponse
 
-Returned by every `generateText` call.
+Returned by every `generateText` call:
 
 ```swift
 public struct AIResponse: Sendable {
@@ -127,7 +189,7 @@ public struct AIResponse: Sendable {
 }
 ```
 
-Example — reading all fields:
+Example of reading all fields:
 
 ```swift
 let response = try await generateText(model: model, prompt: "Hello")
@@ -153,7 +215,7 @@ public struct TokenUsage: Sendable {
 
 ### AIError
 
-All requests throw `AIError`. Catch it specifically for structured error handling:
+Request failures throw `AIError`. Catch it specifically for structured error handling:
 
 ```swift
 do {
@@ -180,7 +242,7 @@ do {
 
 ## streamText
 
-Stream tokens as they are generated. Works with any provider conforming to ``AIStreamModel``.
+Stream tokens as they are generated. This works with any provider that conforms to ``AIStreamModel``.
 
 ```swift
 for try await chunk in streamText(model: model, prompt: "Tell me a story.") {
@@ -188,12 +250,12 @@ for try await chunk in streamText(model: model, prompt: "Tell me a story.") {
 }
 ```
 
-Each ``AIStreamChunk`` carries:
+Each ``AIStreamChunk`` includes:
 - `text` — the delta for this chunk (one or a few tokens)
 - `finishReason` — non-nil only on the last chunk (`"stop"`, `"end_turn"`, `"STOP"`, etc.)
 - `usage` — non-nil only on the last chunk, where the provider supports it
 
-Accumulate the full response yourself if needed:
+Accumulate the full response yourself when needed:
 
 ```swift
 var fullText = ""
@@ -208,13 +270,67 @@ for try await chunk in streamText(model: model, prompt: "Explain Swift.") {
 }
 ```
 
-Cancellation is supported — wrapping in a `Task` and calling `.cancel()` stops the stream cleanly.
+Cancellation is supported. Wrap the stream in a `Task` and call `.cancel()` to stop it cleanly.
 
 ---
 
+## SwiftUI Hooks
+
+Use ``AIChat`` and ``AICompletion`` when you want SwiftUI-friendly SDK state without adopting a prebuilt UI. Both types are `@Observable`, `@MainActor`, and expose synchronous `send()`, `stop()`, and `reset()` methods.
+
+### AIChat
+
+``AIChat`` manages chat messages, input, loading state, errors, and cancellation. It appends the user message immediately, clears `input`, and streams the assistant reply into `messages`.
+
+```swift
+@State private var chat = AIChat(
+    model: "openai/gpt-4o-mini",
+    systemPrompt: "Be concise."
+)
+
+chat.input = "Explain Swift actors."
+chat.send()
+
+chat.messages   // [ChatMessage]
+chat.isLoading  // true while the reply is streaming
+chat.error      // Error? set when streaming fails
+
+chat.stop()     // cancels the in-flight reply
+chat.reset()    // clears messages, input, loading state, and errors
+```
+
+You can also pass a streaming model directly:
+
+```swift
+let chat = AIChat(
+    model: AIStreamModel.openAI(apiKey: "sk-...", model: "gpt-4o-mini"),
+    systemPrompt: "Reply in one paragraph.",
+    maxMessages: 20
+)
+```
+
+### AICompletion
+
+``AICompletion`` manages single-prompt text generation state. Use `input`/`output`, or the equivalent aliases `prompt`/`completion`.
+
+```swift
+@State private var completion = AICompletion(model: "openai/gpt-4o-mini")
+
+completion.prompt = "Write a release note."
+completion.send()
+
+completion.output     // generated text
+completion.completion // same value as output
+completion.isLoading
+completion.error
+
+completion.stop()
+completion.reset()
+```
+
 ## SwiftyChat
 
-`SwiftyChat` is an `@Observable` class that manages a full multi-turn chat session. It handles message history, streaming, and state — so your SwiftUI view stays simple.
+`SwiftyChat` is an `@Observable` class that manages a full multi-turn chat session. It handles message history, streaming, and state so your SwiftUI view can stay simple.
 
 With the registry (configure once at startup):
 
@@ -225,7 +341,7 @@ With the registry (configure once at startup):
 )
 ```
 
-Or with a direct provider:
+With a direct provider:
 
 ```swift
 @State private var chat = SwiftyChat(
@@ -240,7 +356,7 @@ Or with a direct provider:
 try await chat.send("What is Swift?")
 ```
 
-Every `send()` call:
+Every `send()` call does the following:
 1. Appends the user message to `chat.messages`
 2. Streams the assistant reply token-by-token into a new assistant message
 3. Sets `isStreaming = false` when done
@@ -297,7 +413,7 @@ struct ChatView: View {
 
 ### Multi-turn conversation
 
-History is managed automatically. Every `send()` passes the full `messages` array to the provider — the model sees the entire conversation.
+History is managed automatically. Every `send()` call passes the full `messages` array to the provider, so the model sees the entire conversation.
 
 ```swift
 try await chat.send("My name is Kartikay")
@@ -306,7 +422,7 @@ try await chat.send("What's my name?")  // model answers: "Kartikay"
 
 ### System prompt
 
-Set once at init, injected as the first message on every request:
+Set the system prompt once during initialization. It is injected as the first message on every request:
 
 ```swift
 let chat = SwiftyChat(
@@ -323,7 +439,7 @@ Use `maxMessages` to cap how many messages are sent per request:
 let chat = SwiftyChat(model: .openAI(apiKey: "...", model: "gpt-4o"), maxMessages: 20)
 ```
 
-Oldest messages are trimmed first. System prompt (if set) is always included regardless of the limit.
+The oldest messages are trimmed first. The system prompt, if set, is always included regardless of the limit.
 
 ### Stop and clear
 
@@ -341,6 +457,7 @@ public struct ChatMessage: Sendable, Identifiable {
     public let id: String
     public let role: ChatRole       // .user, .assistant, .system
     public var content: String
+    public var parts: [AIMessageContent]
     public let createdAt: Date
 }
 ```
@@ -349,7 +466,7 @@ public struct ChatMessage: Sendable, Identifiable {
 
 ## generateText
 
-Works with any `AIModel` — direct provider or registry string.
+Works with any `AIModel`, including a direct provider or a registry string.
 
 ```swift
 let response = try await generateText(
@@ -362,11 +479,699 @@ print("Tokens used:", response.usage?.outputTokens ?? 0)
 
 ---
 
+## Embeddings
+
+Use embeddings to turn text into vectors for search, clustering, classification, and similarity scoring. SwiftyAI supports OpenAI-compatible embedding endpoints and Gemini's embedding API through the same feature-level API.
+
+### embed
+
+Generate one embedding vector:
+
+```swift
+let response = try await embed(
+    model: "openai/text-embedding-3-small",
+    input: "Swift actors protect mutable state.",
+    options: EmbeddingOptions(dimensions: 512)
+)
+
+let vector = response.embedding ?? []
+print("Vector dimensions:", vector.count)
+print("Input tokens:", response.usage?.inputTokens ?? 0)
+```
+
+You can also pass a provider directly:
+
+```swift
+let model = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: "sk-...",
+    model: "text-embedding-3-small"
+)
+
+let response = try await embed(model: model, input: "Search query")
+```
+
+Gemini embedding models use the same call. Gemini-specific task hints can be passed in `EmbeddingOptions`:
+
+```swift
+let response = try await embed(
+    model: "gemini/gemini-embedding-001",
+    input: "How do Swift actors work?",
+    options: EmbeddingOptions(
+        dimensions: 768,
+        taskType: .retrievalQuery
+    )
+)
+```
+
+### embedMany
+
+Batch multiple strings in one provider request:
+
+```swift
+let docs = [
+    "Swift actors isolate mutable state.",
+    "Structured concurrency scopes child tasks.",
+    "Optionals represent values that may be absent."
+]
+
+let response = try await embedMany(
+    model: "openai/text-embedding-3-small",
+    inputs: docs,
+    options: EmbeddingOptions(dimensions: 512)
+)
+
+let vectors = response.embeddings
+```
+
+For Gemini retrieval documents, include the task type and an optional title:
+
+```swift
+let response = try await embedMany(
+    model: "gemini/gemini-embedding-001",
+    inputs: docs,
+    options: EmbeddingOptions(
+        taskType: .retrievalDocument,
+        title: "Swift notes"
+    )
+)
+```
+
+### cosineSimilarity
+
+Use `cosineSimilarity(_:_:)` to compare two vectors. It returns `0` for empty vectors, mismatched dimensions, or zero-magnitude vectors.
+
+```swift
+let query = try await embed(
+    model: "openai/text-embedding-3-small",
+    input: "How does Swift protect shared state?"
+)
+let documents = try await embedMany(
+    model: "openai/text-embedding-3-small",
+    inputs: docs
+)
+
+let queryVector = query.embedding ?? []
+let scores = documents.embeddings.map { cosineSimilarity(queryVector, $0) }
+```
+
+### Embedding provider support
+
+| API | OpenAI-compatible | Gemini | Anthropic and others |
+|---|---|---|---|
+| `embed` | `/embeddings` | `models.embedContent` | Not supported |
+| `embedMany` | `/embeddings` with array input | `models.batchEmbedContents` | Not supported |
+| `dimensions` | `dimensions` | `outputDimensionality` | Not supported |
+| `taskType` and `title` | Ignored | Sent to Gemini | Not supported |
+
+---
+
+## Multimodal Messages
+
+Use ``AIMessageContent`` when a prompt includes text plus images, PDFs, audio, video, or file attachments.
+
+```swift
+let response = try await generateText(
+    model: "openai/gpt-4o",
+    prompt: [
+        .text("Describe the important details in this image."),
+        .imageURL(URL(string: "https://example.com/photo.jpg")!, detail: .high)
+    ]
+)
+```
+
+Local bytes use `Data`; base64 strings are accepted when you already have encoded content:
+
+```swift
+let response = try await generateText(
+    model: "gemini/gemini-2.5-flash",
+    prompt: [
+        .text("Summarize this PDF and extract action items."),
+        .pdfData(pdfData, filename: "brief.pdf"),
+        .imageBase64(imageBase64, mediaType: .png)
+    ]
+)
+```
+
+The same multipart prompt shape works with `streamText`, `generateObject`, and `streamObject`.
+
+```swift
+let summary = try await generateObject(
+    model: "openai/gpt-4o",
+    prompt: [
+        .text("Return a structured summary of this receipt."),
+        .imageData(receiptImageData, mediaType: .jpeg)
+    ],
+    output: Output<ReceiptSummary>.object(ReceiptSummary.self)
+).object
+```
+
+### Provider support
+
+| Input | OpenAI-compatible | Anthropic | Gemini |
+|---|---|---|---|
+| Text parts | Yes | Yes | Yes |
+| Image URL | Yes | Yes | Yes, as `file_data` URI |
+| Image base64/Data | Yes | Yes | Yes |
+| PDF URL | Yes | Yes | Yes, as `file_data` URI |
+| PDF base64/Data | Yes | Yes | Yes |
+| Audio base64/Data | Yes for compatible models | Not supported by the native Anthropic encoder | Yes |
+| Video URL/base64/Data | Encoded for compatible backends | Not supported by the native Anthropic encoder | Yes |
+| Generic file URL/base64/Data | Yes | Not supported by the native Anthropic encoder | Yes |
+
+Provider model capability still matters. A provider may reject a media type if the selected model does not support it.
+
+---
+
+## Middleware
+
+Use middleware to wrap a model with reusable request and response behavior without changing provider code.
+
+```swift
+let base = AIModel.openAI(apiKey: "sk-...", model: "gpt-4o-mini")
+
+let model = wrapLanguageModel(
+    base,
+    middleware: [
+        defaultSettingsMiddleware(temperature: 0.2, maxTokens: 500),
+        extractReasoningMiddleware()
+    ]
+)
+
+let response = try await generateText(model: model, prompt: "Answer concisely.")
+```
+
+Middleware receives a ``LanguageModelRequest`` and a ``LanguageModelContinuation``. It can mutate the request before calling the next model, or transform the ``AIResponse`` after the provider returns.
+
+```swift
+let model = wrapLanguageModel(
+    base,
+    middleware: [
+        LanguageModelMiddleware { request, next in
+            var request = request
+            request.promptText += "\nReturn only the final answer."
+            let response = try await next(request)
+            return AIResponse(text: response.text.trimmingCharacters(in: .whitespacesAndNewlines),
+                              model: response.model,
+                              usage: response.usage,
+                              finishReason: response.finishReason)
+        }
+    ]
+)
+```
+
+Middleware composes in order: the first middleware sees the request first, the provider is called last, and responses unwind back through the chain.
+
+### Built-in middleware
+
+- ``defaultSettingsMiddleware(system:temperature:topP:topK:maxTokens:seed:presencePenalty:frequencyPenalty:stopSequences:headers:retryPolicy:promptCaching:)`` applies default generation options only when the request did not set them. Request headers win over default headers on key collision.
+- ``extractJsonMiddleware(onFailure:)`` extracts valid JSON from fenced code blocks or prose-wrapped JSON.
+- ``extractReasoningMiddleware(tags:)`` removes hidden reasoning-style XML blocks such as `<thinking>...</thinking>`.
+- ``simulateStreamingMiddleware(chunkSize:delay:)`` exposes a stream from a non-streaming model by generating once and chunking the final text.
+
+Streaming models can be wrapped directly:
+
+```swift
+let streaming = wrapStreamingLanguageModel(
+    AIStreamModel.openAI(apiKey: "sk-...", model: "gpt-4o-mini"),
+    streamMiddleware: [
+        defaultStreamingSettingsMiddleware(temperature: 0.2)
+    ]
+)
+```
+
+Non-streaming models can provide simulated streaming:
+
+```swift
+let streaming = wrapLanguageModel(
+    base,
+    streamMiddleware: [
+        simulateStreamingMiddleware(chunkSize: 32)
+    ]
+)
+
+for try await chunk in streamText(model: streaming, prompt: "Draft a short update.") {
+    print(chunk.text, terminator: "")
+}
+```
+
+---
+
+## Media Generation
+
+SwiftyAI also includes provider-neutral media APIs for image generation, speech-to-text, text-to-speech, and video generation.
+
+### generateImage
+
+```swift
+let response = try await generateImage(
+    model: "openai/gpt-image-1",
+    prompt: "A friendly robot holding a red skateboard",
+    options: ImageGenerationOptions(
+        count: 1,
+        size: .square1024,
+        quality: .high,
+        format: .png
+    )
+)
+
+let imageData = response.images[0].data
+```
+
+Gemini Imagen uses the same API with Imagen-specific options:
+
+```swift
+let response = try await generateImage(
+    model: "gemini/imagen-4.0-generate-001",
+    prompt: "A product photo of a matte black desk lamp",
+    options: ImageGenerationOptions(
+        count: 1,
+        size: "1K",
+        aspectRatio: "16:9",
+        personGeneration: "dont_allow"
+    )
+)
+```
+
+### Image model middleware
+
+Use `wrapImageModel` to add reusable behavior around image generation, such as prompt rewriting, logging, defaults, or policy checks.
+
+```swift
+let model = AIModel.openAI(apiKey: "sk-...", model: "gpt-image-1")
+let wrapped = wrapImageModel(
+    model,
+    middleware: [
+        ImageModelMiddleware { request, next in
+            var request = request
+            request.prompt += ", high quality studio lighting"
+            return try await next(request)
+        }
+    ]
+)
+
+let response = try await generateImage(model: wrapped, prompt: "A ceramic coffee cup")
+```
+
+### transcribe
+
+```swift
+let audio = AIAudioInput(data: wavData, filename: "meeting.wav", mediaType: .wav)
+
+let transcript = try await transcribe(
+    model: "openai/gpt-4o-transcribe",
+    audio: audio,
+    options: TranscriptionOptions(language: "en")
+)
+
+print(transcript.text)
+```
+
+Gemini transcription uses Gemini's audio understanding path and returns text from `generateContent`:
+
+```swift
+let transcript = try await transcribe(
+    model: "gemini/gemini-2.5-flash",
+    audio: audio,
+    options: TranscriptionOptions(prompt: "Transcribe this audio verbatim.")
+)
+```
+
+### generateSpeech
+
+```swift
+let speech = try await generateSpeech(
+    model: "openai/gpt-4o-mini-tts",
+    text: "Welcome to SwiftyAI.",
+    options: SpeechOptions(voice: "alloy", format: .mp3)
+)
+
+let mp3Data = speech.data
+```
+
+Gemini TTS returns PCM-style audio from the Gemini `generateContent` audio modality:
+
+```swift
+let speech = try await generateSpeech(
+    model: "gemini/gemini-3.1-flash-tts-preview",
+    text: "Say cheerfully: Have a wonderful day!",
+    options: SpeechOptions(voice: "Kore", format: .pcm)
+)
+```
+
+### generateVideo
+
+Video generation is asynchronous at the provider level. `generateVideo` starts the job, polls until completion, and downloads the final MP4 data.
+
+```swift
+let video = try await generateVideo(
+    model: "openai/sora-2",
+    prompt: "A clean logo animation on a white background",
+    options: VideoGenerationOptions(size: "1280x720", seconds: 8)
+)
+
+let mp4Data = video.data
+```
+
+Gemini Veo uses the same API:
+
+```swift
+let video = try await generateVideo(
+    model: "gemini/veo-3.1-generate-preview",
+    prompt: "A cinematic shot of a majestic lion in the savannah.",
+    options: VideoGenerationOptions(aspectRatio: "16:9", negativePrompt: "cartoon")
+)
+```
+
+### Media provider support
+
+| API | OpenAI | Gemini | Anthropic and others |
+|---|---|---|---|
+| `generateImage` | Image API | Imagen `predict` | Not supported |
+| `transcribe` | Audio transcription endpoint | Audio understanding fallback | Not supported |
+| `generateSpeech` | Audio speech endpoint | Gemini TTS via `generateContent` | Not supported |
+| `generateVideo` | Sora Video API | Veo long-running operation | Not supported |
+
+OpenAI-compatible custom providers can call the same concrete provider type directly, but the remote service must actually implement the media endpoint.
+
+---
+
+## Reranking
+
+Use reranking to score a small set of candidate documents against a query and return the most relevant matches. Reranking is independent from embeddings and vector stores: you provide the candidate documents, and the reranker returns ordered indexes and relevance scores.
+
+### Cohere rerank
+
+Configure Cohere once, then resolve a rerank model by string:
+
+```swift
+AI.configure {
+    $0.cohere(apiKey: ProcessInfo.processInfo.environment["COHERE_API_KEY"]!)
+}
+
+let response = try await rerank(
+    model: "cohere/rerank-v3.5",
+    query: "What is the vacation policy?",
+    documents: [
+        "Employees receive fifteen paid vacation days each year.",
+        "The office is closed on public holidays.",
+        "Expense reports are due by Friday."
+    ],
+    options: RerankOptions(topN: 2)
+)
+
+for result in response.results {
+    print(result.index, result.relevanceScore)
+}
+```
+
+You can also pass a Cohere rerank provider directly:
+
+```swift
+let model = AIRerankModel.cohere(apiKey: "...", model: "rerank-v3.5")
+
+let response = try await rerank(
+    model: model,
+    query: "capital of the United States",
+    documents: [
+        RerankDocument("Carson City is the capital of Nevada."),
+        RerankDocument("Washington, D.C. is the capital of the United States.")
+    ],
+    options: RerankOptions(topN: 1, returnDocuments: true)
+)
+
+let best = response.results.first
+print(best?.index ?? -1)
+print(best?.document?.text ?? "")
+```
+
+`RerankOptions.returnDocuments` asks providers that support it to include returned document text. Cohere supports this through its v1 rerank endpoint. `RerankDocument.metadata` is encoded as Cohere document object fields when present.
+
+### Custom rerankers
+
+Conform to ``AIRerankModel`` for mocks, local rerankers, or proprietary backends:
+
+```swift
+struct LocalReranker: AIRerankModel {
+    func rerank(
+        query: String,
+        documents: [RerankDocument],
+        options: RerankOptions
+    ) async throws -> RerankResponse {
+        let scored = documents.enumerated().map { index, document in
+            RerankResult(
+                index: index,
+                relevanceScore: document.text.localizedCaseInsensitiveContains(query) ? 1 : 0,
+                document: options.returnDocuments == true ? document : nil
+            )
+        }
+
+        return RerankResponse(results: Array(scored.prefix(options.topN ?? scored.count)))
+    }
+}
+```
+
+---
+
+## GenerationOptions
+
+All generation functions accept optional `GenerationOptions` to control model behavior. Every field is optional; unset fields are omitted from the request.
+
+```swift
+let options = GenerationOptions(
+    system: "You are a concise assistant.",
+    temperature: 0.7,
+    topP: 0.9,
+    topK: 40,          // Anthropic + Gemini only
+    maxTokens: 512,
+    seed: 42,          // OpenAI + Gemini
+    presencePenalty: 0.1,   // OpenAI-compatible only
+    frequencyPenalty: 0.1,  // OpenAI-compatible only
+    stopSequences: ["END"],
+    headers: ["X-Request-ID": "abc123"],
+    retryPolicy: RetryPolicy(maxAttempts: 3),
+    promptCaching: PromptCachingOptions(cacheKey: "user-123")
+)
+
+// generateText
+let response = try await generateText(model: "openai/gpt-4o-mini", prompt: "Hi", options: options)
+
+// streamText with optional callbacks
+for try await chunk in streamText(
+    model: "anthropic/claude-sonnet-4-6",
+    prompt: "Tell me a story.",
+    options: GenerationOptions(temperature: 0.9, maxTokens: 1000),
+    onChunk: { print($0.text, terminator: "") },
+    onFinish: { print("\nDone. Tokens:", $0.usage?.outputTokens ?? 0) }
+) {}
+
+// generateObject
+let result = try await generateObject(
+    model: "gemini/gemini-2.5-flash",
+    prompt: "Suggest a sci-fi movie",
+    as: Movie.self,
+    options: GenerationOptions(temperature: 0.5)
+)
+```
+
+---
+
+## generateWithTools
+
+Run a multi-step tool loop. The model can request one or more tools, SwiftyAI executes them, and the tool results are sent back to the model until the loop finishes or reaches `maxSteps`.
+
+```swift
+let weather = AITool(
+    name: "weather",
+    description: "Gets the current weather for a city.",
+    parameters: [
+        "type": "object",
+        "properties": ["city": ["type": "string"]],
+        "required": ["city"]
+    ]
+) { args in
+    "Sunny in \(args["city"] as? String ?? "unknown city")"
+}
+
+let result = try await generateWithTools(
+    model: "openai/gpt-4o-mini",
+    prompt: "What is the weather in Delhi?",
+    tools: [weather],
+    maxSteps: 5,
+    stopWhen: [isLoopFinished()],
+    onStepFinish: { step in
+        print("Finished step", step.index)
+    }
+)
+
+print(result.text)
+```
+
+Built-in stop conditions:
+
+- `isLoopFinished()` stops when the model returns final text with no tool calls.
+- `stepCountIs(_:)` stops on a specific step.
+- `hasToolCall(_:)` stops when any tool call, or a named tool call, appears.
+
+`streamWithTools` exposes the same loop as an `AsyncThrowingStream<AIAgentChunk, Error>` and supports `onChunk`, `onStepFinish`, and `onFinish` callbacks.
+
+`createAgentUIStream` exposes the same loop as typed ``AgentEvent`` values, so apps can render agent progress in their own UI without adopting SDK-provided views.
+
+```swift
+let events = createAgentUIStream(
+    model: "openai/gpt-4o-mini",
+    prompt: "What is the weather in Delhi?",
+    tools: [weather]
+)
+
+for try await event in events {
+    switch event {
+    case .agentStarted:
+        print("Agent started")
+    case .stepStarted(let step):
+        print("Step started:", step.stepIndex)
+    case .modelChunk(let chunk):
+        print(chunk.text, terminator: "")
+    case .toolCallStarted(let event):
+        print("Tool requested:", event.toolCall.name)
+    case .toolCallFinished(let event):
+        print("Tool result:", event.toolResult.content)
+    case .stepFinished(let step):
+        print("Step finished:", step.stepIndex)
+    case .agentFinished(let event):
+        print("Final text:", event.result.text)
+    case .failed(let error):
+        print("Agent failed:", error.localizedDescription)
+    }
+}
+```
+
+If the stream fails, SwiftyAI yields `.failed(error)` before finishing the `AsyncThrowingStream` with the same error.
+
+### Typed and dynamic tools
+
+Use `tool()` when your tool has typed Codable input and output:
+
+```swift
+struct TipInput: Decodable {
+    let bill: Double
+    let percent: Double
+}
+
+struct TipOutput: Encodable {
+    let tip: Double
+    let total: Double
+}
+
+let tip = tool(
+    name: "calculate_tip",
+    description: "Calculates a restaurant tip.",
+    inputSchema: .object(properties: [
+        "bill": .number(minimum: 0),
+        "percent": .number(minimum: 0)
+    ]),
+    outputSchema: .object(properties: [
+        "tip": .number(),
+        "total": .number()
+    ])
+) { (input: TipInput) in
+    let tip = input.bill * input.percent / 100
+    return TipOutput(tip: tip, total: input.bill + tip)
+}
+```
+
+Use `dynamicTool()` when the tool needs raw JSON-like arguments:
+
+```swift
+let lookup = dynamicTool(
+    name: "lookup_order",
+    description: "Looks up an order.",
+    inputSchema: .object(properties: ["orderID": .string()])
+) { args in
+    "Order \(args["orderID"] as? String ?? "") is out for delivery."
+}
+```
+
+### Approval, interception, telemetry, and parallel calls
+
+`ToolExecutionOptions` controls the tool loop without changing provider code:
+
+```swift
+let result = try await generateWithTools(
+    model: "openai/gpt-4o-mini",
+    prompt: "Check order A100 and calculate a tip.",
+    tools: [lookup, tip],
+    toolOptions: ToolExecutionOptions(
+        approval: { call in
+            call.name == "lookup_order" ? .execute : .reject(reason: "Needs approval")
+        },
+        onToolCall: { call in
+            call.name == "lookup_order"
+                ? .replaceArguments(#"{"orderID":"B200"}"#)
+                : .execute
+        },
+        onTelemetry: { event in print(event) },
+        parallelToolCalls: true
+    )
+)
+```
+
+By default, tool errors are returned to the model as `AIToolResult(isError: true)`. Set `errorPolicy: .failFast` to throw immediately.
+
+Tool calling uses native request fields for OpenAI-compatible providers, including OpenAI, Groq, OpenRouter, Mistral, Cohere, Cloudflare Workers AI, and Ollama. Anthropic, Gemini, and Apple Foundation Models use a provider-neutral JSON prompt fallback until their native tool formats are mapped.
+
+---
+
+## MCP Client
+
+Use ``MCPClient`` to connect SwiftyAI to Model Context Protocol servers through an app-provided ``MCPTransport``. The SDK provides the client primitives and tool adapter; it does not ship a concrete network, stdio, or server process transport.
+
+```swift
+let client = MCPClient(transport: myTransport)
+
+try await client.initialize()
+let mcpTools = try await client.listTools()
+let tools = mcpTools.asAITools(client: client)
+
+let result = try await generateWithTools(
+    model: "openai/gpt-4o-mini",
+    prompt: "Use the available tools to answer.",
+    tools: tools
+)
+```
+
+The client sends the MCP `initialize` request first, validates the negotiated protocol version, and then sends `notifications/initialized`. `listTools()` fetches all tool pages. `callTool(name:arguments:)` invokes an MCP tool directly and returns an ``MCPCallToolResult``.
+
+### Custom transports
+
+Implement ``MCPTransport`` for the transport your app needs. Tests can use an in-memory transport with queued JSON-RPC responses:
+
+```swift
+actor MockTransport: MCPTransport {
+    var responses: [Data]
+
+    init(responses: [Data]) {
+        self.responses = responses
+    }
+
+    func send(_ data: Data, expectsResponse: Bool) async throws -> Data? {
+        guard expectsResponse else { return nil }
+        return responses.removeFirst()
+    }
+}
+```
+
+### Tool conversion
+
+``MCPTool/asAITool(client:)`` converts a discovered MCP tool into an executable ``AITool``. The adapter preserves the MCP input and output schemas. When the generated tool runs, it calls `tools/call` through the client and returns text content to the SDK tool loop. MCP tool execution errors with `isError: true` are thrown as ``MCPToolExecutionError`` so the existing tool error policy can mark the tool result as an error.
+
+---
+
 ## generateObject
 
-Returns a decoded Swift struct. No manual JSON parsing.
+Returns a decoded Swift struct. No manual JSON parsing is required.
 
-Define your type conforming to `JSONSchemaConvertible`:
+Define a type that conforms to `JSONSchemaConvertible`:
 
 ```swift
 struct Movie: Codable, JSONSchemaConvertible, Sendable {
@@ -409,7 +1214,103 @@ public struct ObjectResponse<T: Decodable & Sendable>: Sendable {
 }
 ```
 
-Note: V1 uses prompt injection — the schema is appended to the prompt and the response is decoded. Markdown fences (` ```json ``` `) are stripped automatically. Extra keys returned by the LLM are silently ignored by `JSONDecoder`.
+Note: Version 1 appends the schema to the prompt and decodes the model response. Markdown fences (` ```json ``` `) are stripped automatically. Extra keys returned by the LLM are ignored by `JSONDecoder`.
+
+### Output.object, Output.array, and Output.enum
+
+For new code, prefer `Output` with `AISchemaConvertible`:
+
+```swift
+struct Movie: Codable, AISchemaConvertible {
+    let title: String
+    let year: Int
+
+    static var aiSchema: AISchema {
+        .object(
+            properties: [
+                "title": .string(description: "Movie title", minLength: 1),
+                "year": .integer(minimum: 1888)
+            ],
+            required: ["title", "year"]
+        )
+    }
+}
+
+let movie = try await generateObject(
+    model: "openai/gpt-4o-mini",
+    prompt: "Suggest a sci-fi movie",
+    output: .object(Movie.self)
+).object
+```
+
+Arrays:
+
+```swift
+let movies = try await generateObject(
+    model: "openai/gpt-4o-mini",
+    prompt: "Suggest three sci-fi movies",
+    output: Output<[Movie]>.array(Movie.self)
+).object
+```
+
+Enums:
+
+```swift
+enum Priority: String, Codable, CaseIterable {
+    case low, medium, high
+}
+
+let priority = try await generateObject(
+    model: "openai/gpt-4o-mini",
+    prompt: "Classify this as low, medium, or high priority.",
+    output: Output<Priority>.enumeration(Priority.self)
+).object
+```
+
+### streamObject
+
+`streamObject` streams raw JSON text as it arrives and attempts best-effort partial decoding. Final output is strictly validated before finishing.
+
+```swift
+for try await chunk in streamObject(
+    model: "openai/gpt-4o-mini",
+    prompt: "Suggest a sci-fi movie",
+    output: Output<Movie>.object(Movie.self)
+) {
+    print(chunk.textDelta, terminator: "")
+    if let partial = chunk.partialObject {
+        print("Partial:", partial)
+    }
+    if let object = chunk.object {
+        print("Final:", object)
+    }
+}
+```
+
+If final JSON does not match the schema, SwiftyAI throws:
+
+```swift
+catch AIError.schemaValidationFailed(let issues) {
+    for issue in issues {
+        print(issue.path, issue.message)
+    }
+}
+```
+
+### @Guide constraints
+
+`@Guide` can keep field constraints near your model type. In this version it is metadata for your own schema declarations, not automatic schema synthesis:
+
+```swift
+struct Recipe: Codable, AISchemaConvertible {
+    @Guide("Short recipe title", minLength: 1)
+    var title: String
+
+    static var aiSchema: AISchema {
+        .object(properties: ["title": .string(description: "Short recipe title", minLength: 1)])
+    }
+}
+```
 
 ---
 
@@ -417,7 +1318,7 @@ Note: V1 uses prompt injection — the schema is appended to the prompt and the 
 
 ### OpenAI
 
-Free tier: no. Models: `gpt-4o`, `gpt-4o-mini`, `o1-mini`, etc.
+Free tier: no. Models include `gpt-4o`, `gpt-4o-mini`, `o1-mini`, and others.
 
 ```swift
 let model = AIModel.openAI(
@@ -431,7 +1332,7 @@ print(response.text)
 
 ### Anthropic
 
-Free tier: no. Models: `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`, etc.
+Free tier: no. Models include `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`, and others.
 
 ```swift
 let model = AIModel.anthropic(
@@ -445,7 +1346,7 @@ print(response.text)
 
 ### Google Gemini
 
-Free tier: yes. Models: `gemini-2.5-flash`, `gemini-2.5-pro`, etc.
+Free tier: yes. Models include `gemini-2.5-flash`, `gemini-2.5-pro`, and others.
 
 ```swift
 let model = AIModel.gemini(
@@ -459,7 +1360,7 @@ print(response.text)
 
 ### Groq
 
-Free tier: yes. Models: `llama-3.3-70b-versatile`, `mixtral-8x7b-32768`, etc.
+Free tier: yes. Models include `llama-3.3-70b-versatile`, `mixtral-8x7b-32768`, and others.
 
 ```swift
 let model = AIModel.groq(
@@ -487,7 +1388,7 @@ print(response.text)
 
 ### Mistral
 
-Free tier: yes (`mistral-small-latest` has a free tier). Models: `mistral-large-latest`, `mistral-small-latest`, etc.
+Free tier: yes (`mistral-small-latest` has a free tier). Models include `mistral-large-latest`, `mistral-small-latest`, and others.
 
 ```swift
 let model = AIModel.mistral(
@@ -501,7 +1402,7 @@ print(response.text)
 
 ### Cohere
 
-Free tier: yes. Models: `command-a-03-2025`, `command-r-plus`, etc.
+Free tier: yes. Models include `command-a-03-2025`, `command-r-plus`, and others.
 
 ```swift
 let model = AIModel.cohere(
@@ -515,7 +1416,7 @@ print(response.text)
 
 ### Cloudflare Workers AI
 
-Free tier: yes. Requires your account ID from the Cloudflare Workers dashboard. Models: `@cf/meta/llama-3.3-70b-instruct-fp8-fast`, etc.
+Free tier: yes. Requires your account ID from the Cloudflare Workers dashboard. Models include `@cf/meta/llama-3.3-70b-instruct-fp8-fast` and others.
 
 ```swift
 let model = AIModel.cloudflare(
@@ -530,7 +1431,7 @@ print(response.text)
 
 ### Ollama (local)
 
-Free. Runs models on your Mac — no API key, no cloud. Requires [Ollama](https://ollama.com) installed and a model pulled (`ollama pull llama3.2`).
+Free. Runs models on your Mac with no API key and no cloud dependency. Requires [Ollama](https://ollama.com) and a pulled model, such as `ollama pull llama3.2`.
 
 ```swift
 let model = AIModel.ollama(model: "llama3.2")
@@ -545,11 +1446,11 @@ Non-default host or port:
 let model = AIModel.ollama(model: "llama3.2", baseURL: "http://localhost:8080/v1")
 ```
 
-Popular models: `llama3.2`, `mistral`, `gemma3`, `phi4`, `qwen2.5-coder`. Run `ollama list` to see what's pulled.
+Popular models include `llama3.2`, `mistral`, `gemma3`, `phi4`, and `qwen2.5-coder`. Run `ollama list` to see what is installed.
 
 ### Apple Foundation Models (on-device)
 
-Free. Uses Apple's on-device model via the `FoundationModels` framework. Requires iOS 26+ / macOS 26+, Apple Silicon, and Apple Intelligence enabled in Settings.
+Free. Uses Apple's on-device model through the `FoundationModels` framework. Requires iOS 26+ or macOS 26+, Apple Silicon, and Apple Intelligence enabled in Settings.
 
 ```swift
 import FoundationModels  // iOS 26+, macOS 26+
@@ -567,11 +1468,11 @@ if #available(iOS 26, macOS 26, *) {
 }
 ```
 
-Token limit: 4096 combined input + output. No usage metadata returned (Apple doesn't expose token counts).
+Token limit: 4096 combined input and output tokens. No usage metadata is returned because Apple does not expose token counts.
 
 ### Custom OpenAI-compatible backend
 
-Any backend that speaks the OpenAI `/chat/completions` format — Together AI, LM Studio, vLLM, etc.
+Any backend that supports the OpenAI `/chat/completions` format, such as Together AI, LM Studio, or vLLM.
 
 ```swift
 let model = OpenAICompatibleProvider(
@@ -592,29 +1493,121 @@ print(response.text)
 
 - ``AI``
 - ``AIConfiguration``
+- ``ProviderRegistry``
+- ``createProviderRegistry(_:)``
+- ``customProvider(languageModels:streamModels:toolCallingModels:imageModels:transcriptionModels:speechModels:videoModels:embeddingModels:rerankModels:)``
 
 ### Core
 
 - ``AIModel``
+- ``AIEmbeddingModel``
 - ``AIStreamModel``
 - ``AIResponse``
 - ``AIStreamChunk``
 - ``TokenUsage``
+- ``EmbeddingResponse``
+- ``EmbeddingUsage``
 - ``AIError``
+- ``AIMessageContent``
+- ``AIMediaType``
+- ``ImageDetail``
 
 ### Chat
 
+- ``AIChat``
+- ``AICompletion``
 - ``SwiftyChat``
 - ``ChatMessage``
 - ``ChatRole``
 
 ### Generation
 
-- ``generateText(model:prompt:)``
-- ``streamText(model:prompt:)``
-- ``generateObject(model:prompt:as:)``
+- ``generateText(model:prompt:options:)``
+- ``streamText(model:prompt:options:onChunk:onFinish:)``
+- ``wrapLanguageModel(_:middleware:)``
+- ``wrapLanguageModel(_:middleware:streamMiddleware:)``
+- ``wrapStreamingLanguageModel(_:middleware:streamMiddleware:)``
+- ``LanguageModelRequest``
+- ``LanguageModelStreamRequest``
+- ``LanguageModelMiddleware``
+- ``LanguageModelStreamMiddleware``
+- ``LanguageModelContinuation``
+- ``LanguageModelStreamContinuation``
+- ``defaultSettingsMiddleware(system:temperature:topP:topK:maxTokens:seed:presencePenalty:frequencyPenalty:stopSequences:headers:retryPolicy:promptCaching:)``
+- ``defaultStreamingSettingsMiddleware(system:temperature:topP:topK:maxTokens:seed:presencePenalty:frequencyPenalty:stopSequences:headers:retryPolicy:promptCaching:)``
+- ``extractJsonMiddleware(onFailure:)``
+- ``extractReasoningMiddleware(tags:)``
+- ``simulateStreamingMiddleware(chunkSize:delay:)``
+- ``generateWithTools(model:prompt:tools:options:maxSteps:stopWhen:onStepFinish:toolOptions:)``
+- ``streamWithTools(model:prompt:tools:options:maxSteps:stopWhen:onChunk:onStepFinish:onFinish:toolOptions:)``
+- ``createAgentUIStream(model:prompt:tools:options:maxSteps:stopWhen:onEvent:onStepFinish:onFinish:toolOptions:)``
+- ``generateObject(model:prompt:as:options:)``
+- ``streamObject(model:prompt:output:options:onPartial:onFinish:)``
+- ``embed(model:input:options:)``
+- ``embedMany(model:inputs:options:)``
+- ``cosineSimilarity(_:_:)``
+- ``generateImage(model:prompt:options:)``
+- ``rerank(model:query:documents:options:)``
+- ``transcribe(model:audio:options:)``
+- ``generateSpeech(model:text:options:)``
+- ``generateVideo(model:prompt:options:)``
+- ``GenerationOptions``
+- ``EmbeddingOptions``
+- ``EmbeddingTaskType``
+- ``RerankOptions``
+- ``RerankDocument``
+- ``RerankResult``
+- ``RerankResponse``
+- ``AIRerankModel``
+- ``ImageGenerationOptions``
+- ``ImageResponse``
+- ``GeneratedImage``
+- ``ImageSize``
+- ``ImageQuality``
+- ``ImageOutputFormat``
+- ``SpeechOptions``
+- ``SpeechResponse``
+- ``TranscriptionOptions``
+- ``TranscriptionResponse``
+- ``AIAudioInput``
+- ``AudioFormat``
+- ``VideoGenerationOptions``
+- ``VideoResponse``
+- ``AIImageModel``
+- ``ImageGenerationRequest``
+- ``ImageModelMiddleware``
+- ``wrapImageModel(_:middleware:)``
 - ``ObjectResponse``
+- ``ObjectStreamChunk``
+- ``Output``
+- ``AISchema``
+- ``AISchemaConvertible``
+- ``AISchemaValidationIssue``
+- ``Guide``
 - ``JSONSchemaConvertible``
+- ``AITool``
+- ``tool(name:description:inputSchema:outputSchema:execute:)``
+- ``dynamicTool(name:description:inputSchema:outputSchema:execute:)``
+- ``ToolExecutionOptions``
+- ``MCPClient``
+- ``MCPTransport``
+- ``MCPTool``
+- ``MCPCallToolResult``
+- ``MCPToolContent``
+- ``MCPToolExecutionError``
+- ``MCPJSONValue``
+- ``MCPJSONRPCRequest``
+- ``MCPJSONRPCNotification``
+- ``MCPJSONRPCResponse``
+- ``MCPJSONRPCError``
+- ``MCPClientError``
+- ``AIStepResult``
+- ``AIStopCondition``
+- ``AgentEvent``
+- ``AgentToolCallEvent``
+- ``AgentToolResultEvent``
+- ``AgentStepEvent``
+- ``AgentFinishEvent``
 
 ### Providers
 
@@ -625,6 +1618,7 @@ print(response.text)
 - ``OpenRouterProvider``
 - ``MistralProvider``
 - ``CohereProvider``
+- ``CohereRerankProvider``
 - ``CloudflareProvider``
 - ``OllamaProvider``
 - ``AppleFoundationProvider``

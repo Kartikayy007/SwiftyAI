@@ -1,12 +1,27 @@
 public protocol AIStreamModel: AIModel {
     func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error>
+    func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error>
+    func stream(_ prompt: [AIMessageContent], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error>
     func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error>
+    func stream(messages: [ChatMessage], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error>
 }
 
 public extension AIStreamModel {
+    func stream(_ prompt: String, options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        stream(prompt)
+    }
+
+    func stream(_ prompt: [AIMessageContent], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        stream(prompt.textContent, options: options)
+    }
+
     func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
         let prompt = messages.last(where: { $0.role == .user })?.content ?? ""
         return stream(prompt)
+    }
+
+    func stream(messages: [ChatMessage], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        stream(messages: messages)
     }
 }
 

@@ -1,0 +1,71 @@
+# Quickstart
+
+Build the smallest useful SwiftyAI flow: configure a model, generate text, stream text, and add one option.
+
+## What it does
+
+The quickstart proves your provider setup works and gives you the core shape used by most other docs.
+
+## Why it matters
+
+Text generation is the base layer. Tools, objects, hooks, telemetry, and retrieval all build on the same model and options concepts.
+
+## Before you start
+
+1. Finish [installation](/docs/installation).
+
+2. Configure a provider from [provider setup](/docs/provider-setup).
+
+3. Keep live API calls out of unit tests.
+
+## Steps
+
+<Step title="Generate text">
+Call `generateText` when you need the full response before continuing.
+</Step>
+
+<Step title="Stream text">
+Call `streamText` when your app should react to chunks as they arrive.
+</Step>
+
+<Step title="Add options">
+Use `GenerationOptions` for system prompts, temperature, max tokens, stop sequences, and callbacks.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let model = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-4o-mini"
+)
+
+let answer = try await generateText(
+    model: model,
+    prompt: "What should I know before using Swift concurrency?",
+    options: GenerationOptions(
+        system: "Be practical and concise.",
+        temperature: 0.3,
+        maxTokens: 300
+    )
+)
+
+print(answer.text)
+
+for try await chunk in streamText(model: model, prompt: "Write a short haiku about Swift.") {
+    print(chunk.text, terminator: "")
+}
+```
+
+## API notes
+
+Use [generation options](/docs/generation-options) for request behavior and [telemetry](/docs/telemetry) when you need observability.
+
+## Related docs
+
+<Related>
+Continue with [generate text](/docs/generate-text), [stream text](/docs/stream-text), and [SwiftUI hooks](/docs/swiftui-hooks).
+</Related>
