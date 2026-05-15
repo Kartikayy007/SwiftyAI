@@ -1,0 +1,68 @@
+# Generate Text
+
+`generateText` sends a prompt to a model and returns a complete `AIResponse`.
+
+## What it does
+
+Use `generateText` for classification, summarization, short assistants, batch jobs, tests, and any flow where your code waits for one final answer.
+
+## Why it matters
+
+It is the simplest model call in the SDK. It gives you text, model metadata, token usage when the provider returns it, and a finish reason.
+
+## Before you start
+
+1. Configure a provider.
+
+2. Decide whether a direct model or [provider registry](/docs/provider-registry) string fits your app.
+
+3. Choose [generation options](/docs/generation-options) for control.
+
+## Steps
+
+<Step title="Create a model">
+Use a direct provider instance for the first call.
+</Step>
+
+<Step title="Send a prompt">
+Pass the model and prompt into `generateText`.
+</Step>
+
+<Step title="Read the response">
+Use `response.text`, `response.usage`, and `response.finishReason`.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let model = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-4o-mini"
+)
+
+let response = try await generateText(
+    model: model,
+    prompt: "Summarize the benefits of Swift actors.",
+    options: GenerationOptions(
+        system: "Answer for an experienced iOS engineer.",
+        temperature: 0.2,
+        maxTokens: 250
+    )
+)
+
+print(response.text)
+print(response.usage?.totalTokens ?? 0)
+```
+
+## API notes
+
+Use [stream text](/docs/stream-text) when the user should see output immediately. Use [generate object](/docs/generate-object) when you need typed structured output.
+
+## Related docs
+
+<Related>
+Read [generation options](/docs/generation-options), [provider setup](/docs/provider-setup), and [telemetry](/docs/telemetry).
+</Related>

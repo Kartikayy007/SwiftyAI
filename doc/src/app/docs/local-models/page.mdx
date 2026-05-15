@@ -1,0 +1,61 @@
+# Local Models
+
+Local models run on the user machine or Apple platform instead of a remote API.
+
+## What it does
+
+SwiftyAI supports local provider surfaces such as Ollama and Apple Foundation Models where available.
+
+## Why it matters
+
+Local models can reduce cost, improve privacy, support offline workflows, and create faster development loops.
+
+## Before you start
+
+1. Check device and operating system support.
+
+2. Verify the local runtime is installed or available.
+
+3. Keep cloud fallback behavior explicit.
+
+## Steps
+
+<Step title="Use Ollama for local Mac development">
+Run an Ollama model locally and point the provider at it.
+</Step>
+
+<Step title="Use Apple Foundation Models where available">
+Check availability before calling the provider.
+</Step>
+
+<Step title="Route sensitive prompts locally">
+Use local providers for private or offline flows.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let local = OllamaProvider(
+    model: "llama3.2",
+    baseURL: "http://localhost:11434/v1"
+)
+
+let response = try await generateText(
+    model: local,
+    prompt: "Draft a private note summary without sending data to the cloud."
+)
+
+print(response.text)
+```
+
+## API notes
+
+Local model quality and capability vary by model. Keep feature fallbacks visible and test behavior on real target devices.
+
+## Related docs
+
+<Related>
+Read [providers](/docs/providers), [provider registry](/docs/provider-registry), and [generation options](/docs/generation-options).
+</Related>

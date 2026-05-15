@@ -8,6 +8,10 @@ public enum AIError: Error, Sendable {
     case apiError(statusCode: Int, message: String)
     case providerNotConfigured(String)
     case invalidModelString(String)
+    case unsupportedFeature(String)
+    case toolNotFound(String)
+    case maxStepsExceeded(Int)
+    case schemaValidationFailed([AISchemaValidationIssue])
 }
 
 extension AIError: LocalizedError {
@@ -27,6 +31,15 @@ extension AIError: LocalizedError {
             return "Provider '\(provider)' not configured — call AI.configure { $0.\(provider)(apiKey:) } at app startup"
         case .invalidModelString(let model):
             return "Invalid model string '\(model)' — use 'provider/model' format, e.g. 'openai/gpt-4o-mini'"
+        case .unsupportedFeature(let feature):
+            return "Unsupported feature: \(feature)"
+        case .toolNotFound(let name):
+            return "Tool '\(name)' was requested but is not registered"
+        case .maxStepsExceeded(let maxSteps):
+            return "Tool loop exceeded maxSteps (\(maxSteps))"
+        case .schemaValidationFailed(let issues):
+            let details = issues.map { "\($0.path): \($0.message)" }.joined(separator: "; ")
+            return "Schema validation failed: \(details)"
         }
     }
 }

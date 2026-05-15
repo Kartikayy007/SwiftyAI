@@ -1,0 +1,65 @@
+# Providers
+
+Providers adapt external and local model services to SwiftyAI protocols.
+
+## What it does
+
+Provider implementations cover text generation, streaming, tools, embeddings, reranking, image generation, audio, video, and local model use.
+
+## Why it matters
+
+AI products should not hardcode one backend forever. Providers let you choose capability, cost, latency, privacy, or availability per feature.
+
+## Before you start
+
+1. Choose the provider by capability, not popularity.
+
+2. Use OpenAI compatible providers when the service follows chat completions style APIs.
+
+3. Use provider specific types when the service has unique request shapes.
+
+## Steps
+
+<Step title="Pick a capability">
+Text, streaming, tools, embeddings, reranking, media, and local models use different protocols.
+</Step>
+
+<Step title="Create the provider">
+Pass API keys, base URLs, model IDs, and sessions as needed.
+</Step>
+
+<Step title="Use the shared SDK API">
+Call the same public helpers regardless of provider.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let openAI = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]!,
+    model: "gpt-4o-mini"
+)
+
+let anthropic = AnthropicProvider(
+    apiKey: ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"]!,
+    model: "claude-haiku-4-5-20251001"
+)
+
+let gemini = GeminiProvider(
+    apiKey: ProcessInfo.processInfo.environment["GEMINI_API_KEY"]!,
+    model: "gemini-2.5-flash"
+)
+```
+
+## API notes
+
+Provider tests should mock network sessions. Live provider tests should skip when keys or local services are unavailable.
+
+## Related docs
+
+<Related>
+Read [provider setup](/docs/provider-setup), [provider registry](/docs/provider-registry), and [local models](/docs/local-models).
+</Related>

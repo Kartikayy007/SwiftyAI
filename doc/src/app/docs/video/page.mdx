@@ -1,0 +1,58 @@
+# Video
+
+Video generation creates video outputs through providers that expose operation based media APIs.
+
+## What it does
+
+SwiftyAI provides video generation primitives that can create provider operations, poll completion, and return downloaded media.
+
+## Why it matters
+
+Video generation usually has a different lifecycle from text. The SDK keeps that operation flow separate from text generation while preserving a familiar API shape.
+
+## Before you start
+
+1. Choose a provider with video generation support.
+
+2. Expect longer latency than text or image generation.
+
+3. Treat output as binary media, not a chat response.
+
+## Steps
+
+<Step title="Create a video model">
+Use a video capable provider and model.
+</Step>
+
+<Step title="Start generation">
+Pass a text or image prompt and media options.
+</Step>
+
+<Step title="Use the returned media">
+Store the generated video or hand it to your app layer.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let video = try await generateVideo(
+    model: videoModel,
+    prompt: "A short product shot of a Swift SDK logo glowing in orange light.",
+    options: VideoGenerationOptions(durationSeconds: 4)
+)
+
+print(video.mediaType)
+print(video.data.count)
+```
+
+## API notes
+
+Video provider APIs often use polling. Keep cancellation and retry behavior visible in your app layer.
+
+## Related docs
+
+<Related>
+Read [image generation](/docs/image-generation), [multimodal input](/docs/multimodal), and [telemetry](/docs/telemetry).
+</Related>

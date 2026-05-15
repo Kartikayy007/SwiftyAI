@@ -54,11 +54,15 @@ final class OpenRouterStreamTests: XCTestCase {
         var lastChunk: AIStreamChunk?
         var chunkCount = 0
         print("[OpenRouter stream] starting...")
-        for try await chunk in live.stream("Say hi in one sentence") {
-            full += chunk.text
-            chunkCount += 1
-            print("[OpenRouter chunk \(chunkCount)] \"\(chunk.text)\"")
-            lastChunk = chunk
+        do {
+            for try await chunk in live.stream("Say hi in one sentence") {
+                full += chunk.text
+                chunkCount += 1
+                print("[OpenRouter chunk \(chunkCount)] \"\(chunk.text)\"")
+                lastChunk = chunk
+            }
+        } catch {
+            try skipLiveProviderError(error, provider: "OpenRouter")
         }
         print("[OpenRouter stream] done — \(chunkCount) chunks, full response: \"\(full)\"")
         if let reason = lastChunk?.finishReason { print("[OpenRouter stream] finish reason: \(reason)") }

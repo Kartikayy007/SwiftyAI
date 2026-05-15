@@ -102,7 +102,11 @@ final class OpenRouterProviderTests: XCTestCase {
             apiKey: apiKey,
             model: "meta-llama/llama-3.3-70b-instruct:free"
         )
-        let response = try await liveProvider.generate("Reply with exactly: ok")
-        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        do {
+            let response = try await liveProvider.generate("Reply with exactly: ok")
+            XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "OpenRouter")
+        }
     }
 }

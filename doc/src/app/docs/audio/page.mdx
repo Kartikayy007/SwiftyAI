@@ -1,0 +1,67 @@
+# Audio
+
+Audio APIs cover transcription and speech generation.
+
+## What it does
+
+Use transcription to turn audio files into text. Use speech generation to turn text into audio.
+
+## Why it matters
+
+Voice notes, support calls, accessibility features, and spoken assistants all need audio primitives that fit the same provider abstraction.
+
+## Before you start
+
+1. Choose a provider with transcription or speech support.
+
+2. Know the accepted audio formats.
+
+3. Keep binary data handling outside prompts.
+
+## Steps
+
+<Step title="Transcribe audio">
+Send audio data or a file payload to a transcription model.
+</Step>
+
+<Step title="Generate speech">
+Send text and voice options to a speech model.
+</Step>
+
+<Step title="Connect to generation">
+Feed transcripts into [generate text](/docs/generate-text) or tools.
+</Step>
+
+## Example
+
+```swift
+import Foundation
+import Swifty_AI
+
+let audioData = try Data(contentsOf: URL(fileURLWithPath: "meeting.m4a"))
+
+let transcript = try await transcribe(
+    model: transcriptionModel,
+    audio: audioData,
+    fileName: "meeting.m4a"
+)
+
+let speech = try await generateSpeech(
+    model: speechModel,
+    text: "Your summary is ready.",
+    voice: "alloy"
+)
+
+print(transcript.text)
+print(speech.data.count)
+```
+
+## API notes
+
+Use [telemetry](/docs/telemetry) around audio workflows to track latency and failures, especially for large files.
+
+## Related docs
+
+<Related>
+Read [multimodal input](/docs/multimodal), [generate text](/docs/generate-text), and [providers](/docs/providers).
+</Related>

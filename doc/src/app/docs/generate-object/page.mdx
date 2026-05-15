@@ -1,0 +1,63 @@
+# Generate Object
+
+`generateObject` asks a model for structured output and decodes it into a Swift type.
+
+## What it does
+
+Use structured output when your app needs data, not prose. Good examples are extraction, classification, routing decisions, and normalized summaries.
+
+## Why it matters
+
+Typed output turns model responses into normal Swift values. That makes downstream logic easier to test and safer to evolve.
+
+## Before you start
+
+1. Define a `Codable` Swift type.
+
+2. Pick an `Output` shape such as object, array, or enum.
+
+3. Keep fields focused and well named.
+
+## Steps
+
+<Step title="Create a schema type">
+Define the Swift type your application wants.
+</Step>
+
+<Step title="Ask for an object">
+Call `generateObject` with the model, prompt, and output definition.
+</Step>
+
+<Step title="Use the decoded value">
+Use the returned Swift value directly in app logic.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+struct TicketSummary: Codable {
+    let category: String
+    let urgency: String
+    let summary: String
+}
+
+let result = try await generateObject(
+    model: model,
+    prompt: "Classify this support ticket: The app crashes on launch.",
+    output: .object(TicketSummary.self)
+)
+
+print(result.object.category)
+```
+
+## API notes
+
+Structured output still depends on provider capability and model reliability. Handle schema validation errors and keep prompts direct.
+
+## Related docs
+
+<Related>
+Read [generate text](/docs/generate-text), [generation options](/docs/generation-options), and [multimodal input](/docs/multimodal).
+</Related>

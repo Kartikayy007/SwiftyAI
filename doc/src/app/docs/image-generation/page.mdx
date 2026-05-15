@@ -1,0 +1,61 @@
+# Image Generation
+
+Image generation turns a text prompt into image data or provider hosted images.
+
+## What it does
+
+SwiftyAI exposes image model protocols and `generateImage` style helpers for providers that support image creation.
+
+## Why it matters
+
+Apps often need generated thumbnails, mockups, illustrations, or creative variations without hardwiring one provider.
+
+## Before you start
+
+1. Choose an image capable model.
+
+2. Decide size, quality, and output format.
+
+3. Store generated media according to your app requirements.
+
+## Steps
+
+<Step title="Create an image model">
+Use an OpenAI compatible image provider or Gemini image provider.
+</Step>
+
+<Step title="Send a prompt">
+Describe the image clearly and pass size or quality options when needed.
+</Step>
+
+<Step title="Persist the result">
+Write returned data to storage or show it in your app layer.
+</Step>
+
+## Example
+
+```swift
+import Swifty_AI
+
+let image = try await generateImage(
+    model: imageModel,
+    prompt: "A clean app icon for a Swift AI SDK, black background, orange accent",
+    options: ImageGenerationOptions(
+        size: "1024x1024",
+        quality: "standard"
+    )
+)
+
+print(image.mediaType)
+print(image.data.count)
+```
+
+## API notes
+
+Use image middleware when you need to rewrite prompts or enforce generation defaults before requests reach the provider.
+
+## Related docs
+
+<Related>
+Read [multimodal input](/docs/multimodal), [providers](/docs/providers), and [generation options](/docs/generation-options).
+</Related>
