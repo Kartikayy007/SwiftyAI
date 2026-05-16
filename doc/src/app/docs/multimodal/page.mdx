@@ -8,7 +8,7 @@ Multimodal prompts use `[AIMessageContent]` instead of a single `String`. The sa
 | Images | `.imageURL`, `.imageData`, `.imageBase64` | Screenshot review, chart description, visual QA |
 | PDFs | `.pdfData`, `.pdfURL` | Report summarization, policy extraction, document Q&A |
 | Files | `.fileURL`, `.fileData`, `.fileBase64` | Provider-supported file prompts with explicit media type |
-| Audio | `.audioData`, `.audioURL` | Audio understanding inside a prompt |
+| Audio | `.audioData`, `.audioBase64` | Audio understanding inside a prompt |
 | Video | `.videoURL`, `.videoData` | Video understanding inside a prompt |
 
 ## Images
@@ -75,7 +75,7 @@ let response = try await generateText(
 )
 ```
 
-Use [audio](/docs/audio) for dedicated transcription and speech APIs. Multimodal input is for model understanding; media APIs are for producing or transcribing media.
+There is no dedicated `.audioURL` prompt constructor in the current package. For audio prompts, load the bytes into `Data` or pass an existing base64 string. Use [audio](/docs/audio) for dedicated transcription and speech APIs. Multimodal input is for model understanding; media APIs are for producing or transcribing media.
 
 ## Provider Support
 
