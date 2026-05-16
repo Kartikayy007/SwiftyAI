@@ -61,7 +61,7 @@ let local = try await generateText(
 )
 ```
 
-Call `AI.configure` during app startup before user-driven requests. For library code, tests, and dependency injection, prefer direct model instances or a local `ProviderRegistry`.
+Call `AI.configure` during app startup before user-driven requests. For code that configures and calls a model immediately, or for library code, tests, and dependency injection, prefer direct model instances or a local `ProviderRegistry`.
 
 ## Next Reads
 

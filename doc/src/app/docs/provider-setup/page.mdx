@@ -52,6 +52,8 @@ let response = try await generateText(
 )
 ```
 
+Call `AI.configure` during app startup, before user-driven model calls begin. For immediate one-off calls, tests, previews, or library code, prefer direct provider values or a local `ProviderRegistry` so the dependency is explicit at the call site.
+
 | Prefix | Configure with |
 | --- | --- |
 | `openai` | `ai.openAI(apiKey:)` |
