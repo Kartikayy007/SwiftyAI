@@ -1,4 +1,5 @@
 import {
+  Activity,
   AudioLines,
   Boxes,
   Braces,
@@ -18,6 +19,7 @@ import {
   Sparkles,
   SquareFunction,
   TextCursorInput,
+  Workflow,
   Wrench,
 } from "lucide-react";
 
@@ -46,6 +48,7 @@ export const docsNavGroups = [
       { title: "Tools", href: "/docs/tools", icon: Wrench },
       { title: "Tool Calling", href: "/docs/tool-calling", icon: Cable },
       { title: "Agent UI Stream", href: "/docs/agent-ui-stream", icon: Rows3 },
+      { title: "MCP", href: "/docs/mcp", icon: Cpu },
     ],
   },
   {
@@ -77,6 +80,8 @@ export const docsNavGroups = [
   {
     title: "Utilities",
     items: [
+      { title: "Middleware", href: "/docs/middleware", icon: Workflow },
+      { title: "Telemetry", href: "/docs/telemetry", icon: Activity },
       { title: "Utilities", href: "/docs/utilities", icon: Sparkles },
       { title: "Message Management", href: "/docs/message-management", icon: ListChecks },
       { title: "Streaming Utilities", href: "/docs/streaming-utilities", icon: Radio },

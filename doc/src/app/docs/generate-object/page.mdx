@@ -2,6 +2,14 @@
 
 `generateObject` asks the model for JSON, strips common markdown fences, validates the JSON against an `AISchema`, and decodes it into your Swift type.
 
+| Output shape | Best fit |
+| --- | --- |
+| `.object(MyType.self)` | App-owned structs that should keep schema and decoding together |
+| `.array(Element.self)` | Lists, tags, search facets, extracted items |
+| `.enumeration(MyEnum.self)` | Routing, priority, sentiment, status, or other closed choices |
+| Manual `Output<T>` | Types you do not own or ad-hoc schemas for one feature |
+| `streamObject` | UIs that can show partial JSON while waiting for the final value |
+
 ## Define A Schema
 
 Use `AISchemaConvertible` when you want the schema beside the type that will be decoded.

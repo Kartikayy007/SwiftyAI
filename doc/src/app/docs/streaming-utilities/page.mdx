@@ -2,6 +2,13 @@
 
 The streaming utilities help with previews, tests, and UI pacing. They operate on strings, so they can be used independently from provider streams.
 
+| Utility | Use |
+| --- | --- |
+| `simulateReadableStream(_ text:)` | Turn one string into delayed chunks |
+| `simulateReadableStream(_ chunks:)` | Emit exact chunks for tests and previews |
+| `smoothStream` | Re-chunk uneven provider output for calmer UI updates |
+| `simulateStreamingMiddleware` | Give a non-streaming model a stream-like interface |
+
 ## Simulate A Readable Stream
 
 ```swift
@@ -58,6 +65,12 @@ for try await chunk in smooth {
 ```
 
 Smoothing changes UI pacing only. It does not reduce provider latency or token cost.
+
+| Smoothing changes | Smoothing does not change |
+| --- | --- |
+| How often your UI receives text | Provider response time |
+| Chunk size and cadence | Token usage |
+| Visual typing feel | The final generated text |
 
 ## Simulate Streaming Middleware
 

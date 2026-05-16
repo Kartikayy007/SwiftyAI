@@ -2,6 +2,14 @@
 
 `AICompletion` is an observable state object for one prompt and one generated response. It is useful for rewrite tools, title generators, summary panels, and other non-chat UI.
 
+| State | Meaning |
+| --- | --- |
+| `input` / `prompt` | Editable text sent to the model |
+| `output` / `completion` | Generated text returned by the model |
+| `isLoading` | True while generation is active |
+| `error` | Last generation error |
+| `options` | Per-call `GenerationOptions` used by `send()` |
+
 ## State Model
 
 ```swift
@@ -13,15 +21,6 @@
     )
 )
 ```
-
-The public state is:
-
-- `input: String`
-- `output: String`
-- `prompt: String`
-- `completion: String`
-- `isLoading: Bool`
-- `error: Error?`
 
 `prompt` and `completion` are aliases for `input` and `output`.
 

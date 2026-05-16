@@ -2,6 +2,14 @@
 
 This page builds the smallest useful flow: configure a model, generate one response, stream one response, and add request options. The same shape is used throughout the SDK.
 
+| You want | Start with |
+| --- | --- |
+| One complete answer | `generateText` |
+| UI that updates while text arrives | `streamText` |
+| Typed JSON | `generateObject` |
+| Model-controlled app actions | `generateWithTools` |
+| SwiftUI state without building async plumbing | `AIChat` or `AICompletion` |
+
 ## Create A Model
 
 ```swift

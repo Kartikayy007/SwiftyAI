@@ -2,6 +2,13 @@
 
 SwiftyAI supports two setup styles. Direct providers are explicit and easy to test. Model strings are convenient when the app configures providers once and resolves them later.
 
+| Setup style | Best for | Tradeoff |
+| --- | --- | --- |
+| Direct provider values | Tests, previews, dependency injection, small apps | You pass model instances through your own code |
+| `AI.configure` model strings | App-wide provider setup and concise call sites | Uses shared registry state |
+| `ProviderRegistry` | Libraries, multi-tenant apps, mocks, custom providers | You pass the registry into each helper call |
+| `OpenAICompatibleProvider` | OpenAI-style gateways, Ollama, private APIs | Capability depends on the actual endpoint |
+
 ## Direct Providers
 
 Create a provider value and pass it into the feature you want to use.
@@ -45,7 +52,17 @@ let response = try await generateText(
 )
 ```
 
-Available built-in prefixes are `openai`, `anthropic`, `gemini`, `groq`, `openrouter`, `mistral`, `cohere`, `cloudflare`, and `ollama`.
+| Prefix | Configure with |
+| --- | --- |
+| `openai` | `ai.openAI(apiKey:)` |
+| `anthropic` | `ai.anthropic(apiKey:)` |
+| `gemini` | `ai.gemini(apiKey:)` |
+| `groq` | `ai.groq(apiKey:)` |
+| `openrouter` | `ai.openRouter(apiKey:)` |
+| `mistral` | `ai.mistral(apiKey:)` |
+| `cohere` | `ai.cohere(apiKey:)` |
+| `cloudflare` | `ai.cloudflare(accountID:apiKey:)` |
+| `ollama` | `ai.ollama(baseURL:)` |
 
 ## OpenAI-Compatible Endpoints
 

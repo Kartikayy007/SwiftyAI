@@ -29,12 +29,16 @@ That same model can usually be reused for streaming, object generation, tools, a
 
 ## Core Features
 
-- `generateText` returns a complete `AIResponse` with text, model, token usage, and finish reason when the provider sends them.
-- `streamText` yields `AIStreamChunk` values as text arrives and can also call `onChunk` and `onFinish`.
-- `GenerationOptions` carries system prompts, sampling controls, max tokens, stop sequences, per-request headers, retries, and prompt caching hints.
-- `generateObject` and `streamObject` ask the model for JSON and validate it against an `AISchema`.
-- `tool`, `dynamicTool`, `generateWithTools`, and `streamWithTools` run multi-step tool loops with stop conditions and callbacks.
-- `AIChat` and `AICompletion` give SwiftUI apps observable state for chat and one-shot completions.
+| Area | What you use | Best for |
+| --- | --- | --- |
+| Text generation | `generateText`, `AIResponse`, `GenerationOptions` | Summaries, classifiers, rewrite jobs, background tasks, simple assistants |
+| Streaming | `streamText`, `AIStreamChunk`, `onChunk`, `onFinish` | Chat UIs, long answers, progress output, cancellation-aware flows |
+| Structured output | `generateObject`, `streamObject`, `AISchema`, `Output` | JSON extraction, typed app state, validation-style model responses |
+| Tools and agents | `tool`, `dynamicTool`, `generateWithTools`, `streamWithTools` | Retrieval, app actions, live data, multi-step reasoning loops |
+| SwiftUI state | `AIChat`, `AICompletion`, `SwiftyChat` | Observable chat and completion state without prebuilt UI components |
+| Media | `generateImage`, `transcribe`, `generateSpeech`, `generateVideo` | Image, audio, transcription, speech, and video model calls |
+| Providers | Direct providers, `AI.configure`, `ProviderRegistry` | Swapping providers, local models, tests, private gateways |
+| Extensions | Middleware, telemetry, MCP, utilities | Request policy, response cleanup, observability, external tool servers |
 
 ## Choosing A Path
 
@@ -61,4 +65,4 @@ Call `AI.configure` during app startup before user-driven requests. For library 
 
 ## Next Reads
 
-Start with [installation](/docs/installation), then [provider setup](/docs/provider-setup) and [quickstart](/docs/quickstart). After that, read the feature pages for [text](/docs/generate-text), [streaming](/docs/stream-text), [objects](/docs/generate-object), [tools](/docs/tool-calling), and [SwiftUI hooks](/docs/swiftui-hooks).
+Start with [installation](/docs/installation), then [provider setup](/docs/provider-setup) and [quickstart](/docs/quickstart). After that, follow the path your app needs: [text](/docs/generate-text), [streaming](/docs/stream-text), [objects](/docs/generate-object), [tools](/docs/tool-calling), [SwiftUI hooks](/docs/swiftui-hooks), [middleware](/docs/middleware), [MCP](/docs/mcp), or [telemetry](/docs/telemetry).

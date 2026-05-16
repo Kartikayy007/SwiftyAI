@@ -1,0 +1,73 @@
+# MCP
+
+`MCPClient` connects SwiftyAI to Model Context Protocol servers through an app-provided transport. The SDK supplies JSON-RPC models, initialization, tool discovery, tool calling, and an adapter that turns discovered MCP tools into executable `AITool` values.
+
+## Client Lifecycle
+
+An MCP session starts with `initialize`, followed by `notifications/initialized`. After that, the client can list tools and call them.
+
+```swift
+import Foundation
+import SwiftyAI
+
+let client = MCPClient(transport: transport)
+let initialization = try await client.initialize()
+
+print(initialization.protocolVersion)
+
+let mcpTools = try await client.listTools()
+let tools = mcpTools.asAITools(client: client)
+```
+
+| API | Role |
+| --- | --- |
+| `MCPTransport` | Sends JSON-RPC request `Data` and optionally returns response `Data` |
+| `MCPClient.initialize()` | Negotiates protocol version and sends the initialized notification |
+| `MCPClient.listTools()` | Fetches every page of MCP tool definitions |
+| `MCPClient.callTool(name:arguments:)` | Calls one remote MCP tool directly |
+| `MCPTool.asAITool(client:)` | Adapts a discovered tool into the SwiftyAI tool loop |
+
+## Transport Shape
+
+The core SDK stays transport-agnostic. HTTP, stdio, WebSocket, local process, and in-memory test transports all fit behind the same JSON data I/O method.
+
+```swift
+actor TestTransport: MCPTransport {
+    private var responses: [Data?]
+
+    init(responses: [Data?]) {
+        self.responses = responses
+    }
+
+    func send(_ data: Data, expectsResponse: Bool) async throws -> Data? {
+        guard expectsResponse else { return nil }
+        guard !responses.isEmpty else {
+            throw MCPClientError.invalidResponse("Unexpected MCP request.")
+        }
+        return responses.removeFirst()
+    }
+}
+```
+
+Use this shape for tests before wiring a real server transport. It keeps MCP tests fast and network-free.
+
+## Tools In Agents
+
+MCP tools can run inside the same `generateWithTools` loop as local Swift tools.
+
+```swift
+let result = try await generateWithTools(
+    model: model,
+    prompt: "Use the available project tools to inspect the repository.",
+    tools: tools,
+    maxSteps: 6
+)
+
+print(result.text)
+```
+
+When an MCP tool returns text content, the adapter sends that text back to the model. If the MCP result is marked as an error, the adapter throws `MCPToolExecutionError` so the normal tool error policy decides whether to return an error result or fail fast.
+
+<Related>
+Read [tools](/docs/tools), [tool calling](/docs/tool-calling), and [agent UI stream](/docs/agent-ui-stream).
+</Related>

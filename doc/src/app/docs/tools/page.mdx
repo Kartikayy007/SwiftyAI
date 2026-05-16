@@ -4,8 +4,12 @@ Tools let a model ask your Swift code to do work: look up data, call an API, cal
 
 SwiftyAI has two builders:
 
-- `tool` decodes arguments into a Swift `Decodable` type.
-- `dynamicTool` gives you raw `[String: Any]` arguments.
+| Builder | Arguments | Result | Use it when |
+| --- | --- | --- | --- |
+| `tool` | Decoded into a Swift `Decodable` type | `String` or any `Encodable` value | The schema is known and app code should be type-safe |
+| `dynamicTool` | Raw `[String: Any]` values | `String` | The shape comes from a gateway, plugin, or external registry |
+
+Tools are just definitions until they run inside [tool calling](/docs/tool-calling), [agent UI stream](/docs/agent-ui-stream), or an adapted [MCP](/docs/mcp) server tool.
 
 ## Typed Tool
 
@@ -57,6 +61,13 @@ Dynamic tools are useful at integration boundaries, but typed tools make app cod
 ## Approval And Interception
 
 `ToolExecutionOptions` lets the app inspect, reject, replace, or short-circuit tool calls.
+
+| Hook | Runs when | Common use |
+| --- | --- | --- |
+| `onToolCall` | Before approval and execution | Rewrite arguments, return a cached result, block unsafe inputs |
+| `approval` | Before the tool closure runs | Ask the user, enforce policy, stop side effects |
+| `onToolResult` | After a tool returns | Update UI state, logs, or local caches |
+| `onTelemetry` | Throughout the lifecycle | Observe requested, started, succeeded, failed, and skipped events |
 
 ```swift
 let toolOptions = ToolExecutionOptions(

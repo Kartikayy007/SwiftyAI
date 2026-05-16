@@ -2,6 +2,16 @@
 
 `createAgentUIStream` exposes the tool loop as typed UI events. It is built for timelines, progress views, and debug panels where the app needs to show what the agent is doing.
 
+| Event | UI use |
+| --- | --- |
+| `agentStarted` | Initialize timeline state |
+| `stepStarted` and `stepFinished` | Group model and tool work by loop step |
+| `modelChunk` | Append streamed assistant text |
+| `toolCallStarted` | Show the requested tool and arguments |
+| `toolCallFinished` | Render tool output, status, or error |
+| `agentFinished` | Commit the final `AIStepResult` |
+| `failed` | Render an error before the stream throws |
+
 ## Event Stream
 
 ```swift

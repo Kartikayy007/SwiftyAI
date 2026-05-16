@@ -2,6 +2,16 @@
 
 `ProviderRegistry` is a local resolver for custom model strings. It is separate from `AI.configure`, so it works well in tests, previews, multi-tenant apps, and libraries that should not touch shared global state.
 
+| Registry API | Resolves |
+| --- | --- |
+| `model` / `languageModel` | `AIModel` for full text generation |
+| `streamModel` | `AIStreamModel` for streaming |
+| `toolCallingModel` | `AIToolCallingModel` for tool loops |
+| `imageModel` | `AIImageModel` for images |
+| `transcriptionModel` | `AITranscriptionModel` for audio transcription |
+| `speechModel` | `AISpeechModel` for speech output |
+| `videoModel` | `AIVideoModel` for video generation |
+
 ## Register Models By Capability
 
 ```swift
@@ -79,6 +89,12 @@ Resolution methods are capability-specific: `model`, `languageModel`, `streamMod
 ## Error Behavior
 
 The registry validates model strings and capabilities. `"demo"` is invalid because it has no slash. `"missing/chat"` throws provider-not-configured. `"demo/image"` throws unsupported-feature if you ask for it as a stream model.
+
+| Failure | Meaning |
+| --- | --- |
+| Invalid model string | The string is not shaped like `"provider/model"` |
+| Provider not configured | The provider prefix is not present in this registry |
+| Unsupported feature | The provider exists, but the requested model is not registered for that capability |
 
 <Related>
 Use [custom providers](/docs/custom-providers) to build models and [provider setup](/docs/provider-setup) for built-in provider configuration.

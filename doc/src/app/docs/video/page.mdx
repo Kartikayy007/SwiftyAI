@@ -2,6 +2,14 @@
 
 `generateVideo` starts a provider video job, polls until it is complete, and returns a `VideoResponse` with MP4 data.
 
+| Response field | Meaning |
+| --- | --- |
+| `id` | Provider job or result id |
+| `data` | Final video bytes |
+| `mediaType` | Usually MP4 unless the provider returns another type |
+| `status` | Provider status when surfaced |
+| `model` | Model name when returned |
+
 ## Generate Video
 
 ```swift
@@ -53,6 +61,14 @@ Video model names and limits change by provider account, so keep them in configu
 ## Polling Controls
 
 `VideoGenerationOptions` includes `pollInterval` and `maxPollAttempts`. Increase `maxPollAttempts` for long jobs. Decrease `pollInterval` only if the provider allows frequent polling.
+
+| Option | Use |
+| --- | --- |
+| `seconds` | Requested duration |
+| `size` / `aspectRatio` | Output shape for the target surface |
+| `negativePrompt` | Things the model should avoid |
+| `pollInterval` | Delay between provider status checks |
+| `maxPollAttempts` | Upper bound for long-running jobs |
 
 <Related>
 Use [multimodal input](/docs/multimodal) when video is part of a prompt rather than the generated output.

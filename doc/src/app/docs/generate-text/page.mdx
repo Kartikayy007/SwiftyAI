@@ -11,6 +11,14 @@ let response = try await generateText(
 print(response.text)
 ```
 
+| Use case | Pattern |
+| --- | --- |
+| Classification | Keep `temperature` low and ask for a short label or reason |
+| Summarization | Add a role-specific `system` prompt and cap output with `maxTokens` |
+| Copy generation | Increase `temperature` slightly and keep provider metadata for review |
+| Background jobs | Use the full `AIResponse` for usage, finish reason, and logs |
+| Tests and mocks | Pass a direct model value instead of relying on global configuration |
+
 ## Response Metadata
 
 `AIResponse` keeps provider metadata beside the generated text:
