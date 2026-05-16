@@ -1,0 +1,91 @@
+# Telemetry
+
+Telemetry records what happened during an AI call without forcing a logging backend into the SDK. You can track request ids, operation names, model names, latency, token usage, finish reasons, and failures, then send the final record to your own collector.
+
+## Recording Calls
+
+The recorder API is intentionally small. Start a recorder before the model call, mark the first token when streaming begins, then finish or fail it.
+
+```swift
+import SwiftyAI
+
+let recorder = startAICallTelemetry(
+    operation: "generateText",
+    model: "openai/gpt-4o-mini"
+)
+
+do {
+    let response = try await generateText(
+        model: model,
+        prompt: "Write a release note."
+    )
+
+    let telemetry = finishAICallTelemetry(
+        recorder,
+        response: response
+    )
+
+    await analytics.record(telemetry)
+} catch {
+    let telemetry = failAICallTelemetry(recorder, error)
+    await analytics.record(telemetry)
+    throw error
+}
+```
+
+| Field | What it gives you |
+| --- | --- |
+| `requestID` and `callID` | Stable ids for correlating app logs, model calls, and UI events |
+| `operation` | A human name such as `generateText`, `streamText`, or `toolLoop` |
+| `model` | The provider model string or direct model label you choose |
+| `latency` | Start, first-token, and finish timings when available |
+| `usage` | Token counts from `AIResponse` when the provider returns them |
+| `errorMessage` | A compact failure message for debugging and dashboards |
+
+## Streaming Latency
+
+For streams, record first token as soon as the UI receives the first chunk. That gives you a better signal than total duration alone.
+
+```swift
+var recorder = startAICallTelemetry(
+    operation: "streamText",
+    model: "anthropic/claude-3-5-sonnet-latest"
+)
+
+var didRecordFirstToken = false
+var fullText = ""
+
+for try await chunk in streamText(model: model, prompt: prompt) {
+    if !didRecordFirstToken {
+        recorder = recordFirstToken(recorder)
+        didRecordFirstToken = true
+    }
+
+    fullText += chunk.text
+}
+
+let telemetry = finishAICallTelemetry(
+    recorder,
+    response: AIResponse(text: fullText)
+)
+```
+
+## Collectors
+
+Implement `TelemetryCollector` for the system you already use. The SDK also ships `NoopTelemetryCollector` for tests and disabled telemetry paths.
+
+```swift
+struct ConsoleTelemetryCollector: TelemetryCollector {
+    func record(_ telemetry: AICallTelemetry) async {
+        print(telemetry.metadata.operation)
+        print(telemetry.metadata.model ?? "unknown")
+        print(telemetry.latency.duration ?? .zero)
+    }
+}
+```
+
+Telemetry pairs naturally with [tool calling](/docs/tool-calling), where tool lifecycle events can explain why a long-running agent took time.
+
+<Related>
+Read [tool calling](/docs/tool-calling), [agent UI stream](/docs/agent-ui-stream), and [provider registry](/docs/provider-registry).
+</Related>

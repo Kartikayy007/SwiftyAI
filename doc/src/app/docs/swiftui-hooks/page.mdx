@@ -7,6 +7,13 @@ SwiftyAI includes two observable state helpers for SwiftUI apps:
 
 They are state objects, not UI kits. You still build the view.
 
+| Helper | State shape | Best for |
+| --- | --- | --- |
+| `AIChat` | `messages`, `input`, `isLoading`, `error` | Support chat, copilots, conversational search, streaming assistants |
+| `AICompletion` | `input` / `output`, `isLoading`, `error` | Rewrite boxes, title generators, one-shot summaries |
+| Direct model init | Model instance passed at construction | Previews, tests, dependency injection |
+| Model string init | `"provider/model"` plus `AI.configure` | App-wide provider setup |
+
 ## Chat State
 
 ```swift

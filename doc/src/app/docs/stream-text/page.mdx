@@ -2,6 +2,14 @@
 
 `streamText` returns an `AsyncThrowingStream<AIStreamChunk, Error>`. Each chunk contains text and may include usage or finish reason when the provider emits final metadata.
 
+| Need | Use |
+| --- | --- |
+| Append text into a view model | Iterate the returned stream and update state per chunk |
+| Track analytics | Use `onChunk` for first-token timing and `onFinish` for usage |
+| Cancel generation | Cancel the Swift `Task` that is consuming the stream |
+| Smooth local demos | Wrap a model with [streaming utilities](/docs/streaming-utilities) |
+| Chat state | Use [AIChat](/docs/ai-chat) when the UI is a normal message list |
+
 ## Basic Stream
 
 ```swift

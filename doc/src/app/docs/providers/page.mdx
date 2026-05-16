@@ -2,6 +2,14 @@
 
 SwiftyAI includes concrete providers plus an OpenAI-compatible adapter. The SDK API stays the same; the provider decides how requests are encoded.
 
+| Provider family | Typical use |
+| --- | --- |
+| `OpenAICompatibleProvider` | OpenAI, Groq, OpenRouter, Mistral, Cohere, Cloudflare, Ollama, and private gateways |
+| `AnthropicProvider` | Claude text, streaming, and tool-capable workflows |
+| `GeminiProvider` | Gemini text, streaming, tool-capable workflows, and Gemini media |
+| `AppleFoundationProvider` | On-device Apple Intelligence when available |
+| `ProviderRegistry` | App-local or test-local custom model strings |
+
 ## Built-In Prefixes
 
 `AI.configure` supports these model string prefixes:
@@ -71,7 +79,17 @@ This adapter supports text, streaming, tools, and the media protocols when the u
 
 ## Capability Guide
 
-Text and streaming are the safest cross-provider assumptions. Tool calling requires `AIToolCallingModel`. Media APIs require `AIImageModel`, `AITranscriptionModel`, `AISpeechModel`, or `AIVideoModel`.
+| Capability | Required protocol |
+| --- | --- |
+| Full text response | `AIModel` |
+| Streaming text | `AIStreamModel` |
+| Tool calling | `AIToolCallingModel` |
+| Image generation | `AIImageModel` |
+| Transcription | `AITranscriptionModel` |
+| Speech generation | `AISpeechModel` |
+| Video generation | `AIVideoModel` |
+
+Text and streaming are the safest cross-provider assumptions. Tool calling and media calls require the matching protocol.
 
 When a provider cannot support a call, SwiftyAI throws instead of silently pretending the feature exists.
 

@@ -2,6 +2,14 @@
 
 SwiftyAI uses `ChatMessage` for chat history. A message has a role, text content, optional multimodal parts, an id, and a creation date.
 
+| Type | Role |
+| --- | --- |
+| `ChatMessage` | One visible or model-sent message |
+| `ChatRole` | `.system`, `.user`, or `.assistant` |
+| `AIMessageContent` | Text, image, PDF, file, audio, or video prompt parts |
+| `ContextWindow` | Approximate token budgeting for messages |
+| `maxMessages` | Simple history pruning for chat helpers |
+
 ## Text Messages
 
 ```swift
@@ -56,6 +64,13 @@ if context.isNearLimit(for: chat.messages) {
 ```
 
 The estimator uses a simple character-based approximation and assigns a fixed estimate to non-text parts. It is good for warnings, not exact billing.
+
+| Strategy | Use |
+| --- | --- |
+| `maxMessages` | Keep the most recent turns for simple chats |
+| `ContextWindow` warning | Show UI warnings before the context gets too large |
+| Manual summarization | Replace older turns with a summary when long sessions matter |
+| Provider tokenizers | Use when billing-exact token counts are required |
 
 <Related>
 Read [AIChat](/docs/ai-chat), [multimodal input](/docs/multimodal), and [utilities](/docs/utilities).

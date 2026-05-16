@@ -88,7 +88,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
 
       <Separator />
       <footer className="mx-auto flex max-w-[1500px] flex-col gap-3 px-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-        <p>SwiftyAI documentation scaffold.</p>
+        <p>SwiftyAI documentation.</p>
         <p>Built with Next.js, shadcn, and Swift-orange accents.</p>
       </footer>
     </div>

@@ -4,9 +4,13 @@ SwiftyAI ships as a Swift Package. The package product is `SwiftyAI`, and the mo
 
 ## Requirements
 
-- Swift 5.9 or newer
-- iOS 17 or newer
-- macOS 14 or newer
+| Requirement | Version |
+| --- | --- |
+| Swift tools | 5.9 or newer |
+| iOS | 17 or newer |
+| macOS | 14 or newer |
+| Package product | `SwiftyAI` |
+| Module import | `import SwiftyAI` |
 
 The package itself does not force a UI framework. You can use the core generation APIs in app targets, command-line tools, and tests.
 
@@ -67,6 +71,13 @@ let model = OpenAICompatibleProvider(
 ```
 
 Keep API keys out of source control. In app targets, read them from secure app configuration. In local experiments, environment variables are fine.
+
+| After install | Read next |
+| --- | --- |
+| Need API keys and model strings | [Provider setup](/docs/provider-setup) |
+| Want the first model call | [Quickstart](/docs/quickstart) |
+| Building SwiftUI state | [SwiftUI hooks](/docs/swiftui-hooks) |
+| Adding custom providers | [Custom providers](/docs/custom-providers) |
 
 <Related>
 Continue with [provider setup](/docs/provider-setup) and [quickstart](/docs/quickstart).

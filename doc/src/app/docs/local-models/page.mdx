@@ -2,6 +2,13 @@
 
 Local models are usually exposed through an OpenAI-compatible endpoint. Ollama works with SwiftyAI through the same `OpenAICompatibleProvider` used for hosted compatible APIs.
 
+| Local path | Use when |
+| --- | --- |
+| `OpenAICompatibleProvider` | You want explicit construction and easy dependency injection |
+| `AI.configure { ai.ollama() }` | Your app wants `"ollama/model"` strings |
+| Private gateway | Your team exposes local or internal models behind an OpenAI-compatible API |
+| Streaming middleware | The local model is non-streaming but the UI wants incremental output |
+
 ## Direct Ollama Provider
 
 Start Ollama locally, pull a model, then point SwiftyAI at the local API:

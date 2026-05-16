@@ -14,6 +14,14 @@ let options = GenerationOptions(
 )
 ```
 
+| Option area | Fields |
+| --- | --- |
+| Prompt behavior | `system`, `stopSequences` |
+| Sampling | `temperature`, `topP`, `topK`, `seed` |
+| Length and repetition | `maxTokens`, `presencePenalty`, `frequencyPenalty` |
+| Provider transport | `headers`, `retryPolicy`, `promptCaching` |
+| Callbacks | `onChunk`, `onFinish` for APIs that surface callback hooks |
+
 ## Prompt And Sampling
 
 Use these fields to shape the model response:

@@ -2,6 +2,12 @@
 
 `generateWithTools` and `streamWithTools` run a model-tool loop. The model can answer directly, request one or more tools, receive tool results, and continue until a stop condition ends the loop.
 
+| API | Output | Best for |
+| --- | --- | --- |
+| `generateWithTools` | Final `AIStepResult` | Background tasks, server actions, tests, single final answer |
+| `streamWithTools` | `AIAgentChunk` stream plus final result callback | Chat-style UIs that need text and tool progress |
+| `createAgentUIStream` | Higher-level `AgentEvent` stream | Frontend state machines and timeline rendering |
+
 ## One Loop
 
 ```swift
@@ -85,6 +91,13 @@ Use [agent UI stream](/docs/agent-ui-stream) when a UI wants higher-level events
 ## Tool Policies
 
 Tool execution can be controlled per loop:
+
+| Policy | Behavior |
+| --- | --- |
+| `.returnErrorResult` | Convert thrown tool errors into `AIToolResult(isError: true)` and let the model continue |
+| `.failFast` | Throw immediately when a tool fails |
+| `parallelToolCalls: true` | Execute tool calls from the same step concurrently and preserve result order |
+| `parallelToolCalls: false` | Execute calls serially when tools share mutable state or rate limits |
 
 ```swift
 let options = ToolExecutionOptions(

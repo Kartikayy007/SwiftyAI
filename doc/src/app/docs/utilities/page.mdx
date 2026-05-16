@@ -2,6 +2,14 @@
 
 SwiftyAI includes small utilities for ids, context estimates, streams, and middleware. They are intentionally plain Swift so you can use them outside the high-level examples.
 
+| Utility area | APIs |
+| --- | --- |
+| IDs | `generateId`, `generateId(prefix:)` |
+| Context estimates | `ContextWindow` |
+| Message safety | Message validation, pruning, and conversion helpers used by chat APIs |
+| Streams | `simulateReadableStream`, `smoothStream` |
+| Middleware | `wrapLanguageModel`, built-in middleware helpers |
+
 ## IDs
 
 ```swift

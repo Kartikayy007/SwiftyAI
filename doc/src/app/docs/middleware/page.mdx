@@ -1,0 +1,86 @@
+# Middleware
+
+Middleware lets you wrap a model with reusable request and response behavior. It is useful for defaults, cleanup, simulated streaming, private policy checks, and small provider adaptations that should not live in every call site.
+
+## Language Middleware
+
+`wrapLanguageModel` composes `LanguageModelMiddleware` around any `AIModel`. Each middleware receives a mutable request and a continuation, so it can adjust inputs before the provider runs or transform the `AIResponse` after the provider returns.
+
+```swift
+import SwiftyAI
+
+let wrapped = wrapLanguageModel(
+    model,
+    middleware: [
+        defaultSettingsMiddleware(
+            system: "Answer with concise Swift examples.",
+            temperature: 0.2,
+            maxTokens: 500
+        ),
+        extractReasoningMiddleware(),
+        extractJsonMiddleware(onFailure: .leaveUnchanged)
+    ]
+)
+
+let response = try await generateText(
+    model: wrapped,
+    prompt: "Return a JSON object with a title and summary."
+)
+```
+
+| Middleware | Use it for |
+| --- | --- |
+| `defaultSettingsMiddleware` | Applying default system prompts, sampling, headers, retries, and caching hints while letting explicit request options win |
+| `extractJsonMiddleware` | Cleaning model output when JSON is wrapped in Markdown fences or prose |
+| `extractReasoningMiddleware` | Removing hidden reasoning tags before app code consumes the final text |
+| Custom `LanguageModelMiddleware` | Auditing, prompt rewriting, response decoration, internal policy checks, or test doubles |
+
+Middleware composes in order. The first middleware sees the request first, the provider runs last, and the response comes back through the same chain.
+
+## Streaming Middleware
+
+Streaming middleware wraps models that conform to `AIStreamModel`. It can set defaults for streaming requests or simulate a stream from a non-streaming model.
+
+```swift
+let streaming = wrapLanguageModel(
+    model,
+    streamMiddleware: [
+        defaultStreamingSettingsMiddleware(temperature: 0.3),
+        simulateStreamingMiddleware(
+            chunkSize: 24,
+            delay: .milliseconds(30)
+        )
+    ]
+)
+
+for try await chunk in streamText(model: streaming, prompt: "Draft a reply.") {
+    print(chunk.text, terminator: "")
+}
+```
+
+Use simulated streaming for demos, previews, tests, or model adapters that only expose full-response generation. Use native provider streams for production chat and long outputs when the provider supports them.
+
+## Custom Middleware
+
+Custom middleware is plain Swift. Keep it narrow and predictable: update the request, call `next`, then optionally transform the response.
+
+```swift
+let suffixPrompt = LanguageModelMiddleware { request, next in
+    var request = request
+    request.promptText += "\n\nWrite for an iOS engineering audience."
+    return try await next(request)
+}
+
+let wrapped = wrapLanguageModel(model, middleware: [suffixPrompt])
+```
+
+| Pattern | Better as middleware when |
+| --- | --- |
+| Default options | The same model policy applies across many call sites |
+| Output cleanup | Providers return useful text with wrappers your app does not want |
+| Request tagging | Internal gateways need headers, request ids, or metadata |
+| Test behavior | A feature should exercise streaming or cleanup without network access |
+
+<Related>
+Read [generation options](/docs/generation-options), [streaming utilities](/docs/streaming-utilities), and [custom providers](/docs/custom-providers).
+</Related>

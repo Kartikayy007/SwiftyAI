@@ -2,6 +2,14 @@
 
 `generateImage` calls an image-capable provider and returns an `ImageResponse`. Each generated image can contain `data`, `base64`, a hosted `url`, a `mediaType`, and an optional revised prompt.
 
+| Result field | Meaning |
+| --- | --- |
+| `data` | Binary image bytes when the provider returns downloadable content |
+| `base64` | Encoded image data when the provider returns base64 |
+| `url` | Hosted image URL when the provider stores the result |
+| `mediaType` | Output type such as PNG, JPEG, or WebP |
+| `revisedPrompt` | Provider-adjusted prompt when available |
+
 ## Generate An Image
 
 ```swift
@@ -64,5 +72,13 @@ Use the model name your provider account supports.
 ## Options
 
 `ImageGenerationOptions` supports `count`, `size`, `quality`, `format`, `background`, `compression`, `aspectRatio`, `personGeneration`, per-request `headers`, and `retryPolicy`.
+
+| Option | Use |
+| --- | --- |
+| `size` / `aspectRatio` | Match app surfaces such as icons, banners, cards, or storyboards |
+| `quality` | Trade cost/latency for fidelity when the provider supports it |
+| `format` / `compression` | Control storage and upload shape |
+| `background` | Request transparent or opaque outputs where supported |
+| `headers` / `retryPolicy` | Add request metadata and recover from transient provider failures |
 
 Some options are provider-specific. Passing an option that a provider does not support may be ignored or rejected by that provider.

@@ -2,6 +2,15 @@
 
 Multimodal prompts use `[AIMessageContent]` instead of a single `String`. The same prompt parts can be sent to `generateText`, `streamText`, and `generateObject` when the provider supports the media type.
 
+| Part type | Constructors | Common use |
+| --- | --- | --- |
+| Text | `.text` | Instructions, questions, surrounding context |
+| Images | `.imageURL`, `.imageData`, `.imageBase64` | Screenshot review, chart description, visual QA |
+| PDFs | `.pdfData`, `.pdfURL` | Report summarization, policy extraction, document Q&A |
+| Files | `.fileURL`, `.fileData`, `.fileBase64` | Provider-supported file prompts with explicit media type |
+| Audio | `.audioData`, `.audioURL` | Audio understanding inside a prompt |
+| Video | `.videoURL`, `.videoData` | Video understanding inside a prompt |
+
 ## Images
 
 ```swift
@@ -71,6 +80,13 @@ Use [audio](/docs/audio) for dedicated transcription and speech APIs. Multimodal
 ## Provider Support
 
 `AIMessageContent` can represent many media types, but the provider decides which ones are accepted. If a model does not support a media part, the provider call can fail with an API error or `AIError.unsupportedFeature`.
+
+| Provider behavior | How to handle it |
+| --- | --- |
+| Accepts only text | Use `generateText` with a `String` prompt |
+| Accepts images but not files | Split document workflows into extraction and generation |
+| Accepts files with upload ids | Use the file URL/base64/data constructor that matches the provider implementation |
+| Rejects a media type | Catch provider errors and offer a text-only fallback |
 
 <Related>
 Read [generate text](/docs/generate-text) for the text API and [generate object](/docs/generate-object) for structured extraction from multimodal prompts.

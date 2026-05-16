@@ -2,6 +2,12 @@
 
 SwiftyAI exposes two dedicated audio paths: `transcribe` for audio-to-text and `generateSpeech` for text-to-audio.
 
+| API | Direction | Output |
+| --- | --- | --- |
+| `transcribe` | Audio to text | `TranscriptionResponse` with text and optional metadata |
+| `generateSpeech` | Text to audio | `SpeechResponse` with audio bytes, format, and media type |
+| Multimodal audio input | Audio inside a model prompt | Text or object response from the language model |
+
 ## Transcription
 
 ```swift
@@ -56,6 +62,13 @@ try speech.data.write(to: outputURL)
 ```
 
 `SpeechResponse` returns the audio bytes, format, media type, and model.
+
+| Option | Use |
+| --- | --- |
+| `voice` | Pick the provider voice or speaker style |
+| `format` | Choose MP3, WAV, or another supported audio container |
+| `speed` | Slow down or speed up narration where supported |
+| `instructions` | Guide tone, pacing, or style |
 
 ## Gemini Audio
 

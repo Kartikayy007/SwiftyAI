@@ -2,6 +2,14 @@
 
 A custom provider is any Swift type that conforms to one or more SwiftyAI model protocols. Start with the smallest protocol your feature needs, then add streaming, tools, or media only when the provider can really support them.
 
+| Protocol | Implement when |
+| --- | --- |
+| `AIModel` | The provider can return one full text response |
+| `AIStreamModel` | The provider can yield text chunks |
+| `AIToolCallingModel` | The provider can request tools in a structured way |
+| Media protocols | The provider exposes image, transcription, speech, or video endpoints |
+| Middleware wrappers | You only need to adapt requests or responses around an existing provider |
+
 ## Text Provider
 
 ```swift

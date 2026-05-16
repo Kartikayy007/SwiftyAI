@@ -140,6 +140,26 @@
     @apply my-6 ml-6 list-decimal space-y-2 text-muted-foreground;
   }
 
+  .docs-content table {
+    @apply my-6 w-full overflow-hidden rounded-lg border text-sm;
+  }
+
+  .docs-content thead {
+    @apply bg-muted text-foreground;
+  }
+
+  .docs-content th {
+    @apply border-b px-4 py-3 text-left font-medium;
+  }
+
+  .docs-content td {
+    @apply border-b px-4 py-3 align-top text-muted-foreground;
+  }
+
+  .docs-content tr:last-child td {
+    @apply border-b-0;
+  }
+
   .docs-content li {
     @apply leading-7;
   }
