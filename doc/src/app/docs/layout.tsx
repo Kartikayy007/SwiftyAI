@@ -12,7 +12,7 @@ export default function DocsLayout({
   return (
     <DocsShell>
       <main className="min-h-[calc(100vh-3.5rem)]">
-        <div className={cn("flex gap-10 py-8", sectionPaddingX)}>
+        <div className={cn("flex flex-col gap-6 py-6 sm:gap-8 sm:py-8 lg:flex-row lg:gap-10", sectionPaddingX)}>
           <article className="min-w-0 flex-1">
             <div className="docs-content mx-auto max-w-3xl">{children}</div>
           </article>

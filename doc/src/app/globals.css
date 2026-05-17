@@ -159,7 +159,7 @@
   }
 
   .docs-content table {
-    @apply my-6 w-full overflow-hidden rounded-lg border text-sm;
+    @apply my-6 block w-full max-w-full overflow-x-auto rounded-lg border text-sm;
   }
 
   .docs-content thead {
