@@ -101,6 +101,12 @@
   --swift-orange: oklch(0.76 0.2 54);
 }
 
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -116,6 +122,18 @@
 }
 
 @layer components {
+  .hatch-bg {
+    --hatch-line: color-mix(in oklch, var(--foreground) 14%, transparent);
+    background-color: var(--background);
+    background-image: repeating-linear-gradient(
+      -55deg,
+      transparent 0,
+      transparent 5px,
+      var(--hatch-line) 5px,
+      var(--hatch-line) 6px
+    );
+  }
+
   .docs-content h1 {
     @apply scroll-m-20 text-4xl font-semibold tracking-normal text-balance md:text-5xl;
   }

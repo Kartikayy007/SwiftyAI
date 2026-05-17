@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { HomePageShell } from "@/components/home/home-page-shell";
 
 export default function HomePage() {
-  redirect("/docs");
+  return <HomePageShell />;
 }

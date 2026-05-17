@@ -67,26 +67,19 @@ export function DocsSearch() {
         </div>
         <ScrollArea className="h-[calc(100vh-8.5rem)]">
           <div className="space-y-2 px-4 pb-6">
-            {results.map((item) => {
-              const Icon = item.icon;
-
-              return (
+            {results.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className="block rounded-lg border p-3 transition-colors hover:bg-muted"
                 >
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-[var(--swift-orange)]" />
-                    <span className="font-medium">{item.title}</span>
-                  </div>
+                  <span className="font-medium">{item.title}</span>
                   <Badge variant="secondary" className="mt-2">
                     {item.group}
                   </Badge>
                 </Link>
-              );
-            })}
+            ))}
             {results.length === 0 && (
               <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                 No matching docs pages.

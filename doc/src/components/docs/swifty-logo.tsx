@@ -1,11 +1,15 @@
-import { Sparkles } from "lucide-react";
+import Image from "next/image";
 
 export function SwiftyLogo() {
   return (
     <div className="flex items-center gap-2 font-semibold">
-      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--swift-orange)] text-black shadow-sm">
-        <Sparkles className="h-4 w-4" />
-      </div>
+      <Image
+        src="/swiftyAIlogo.png"
+        alt="SwiftyAI"
+        width={32}
+        height={32}
+        className="rounded-md"
+      />
       <span>SwiftyAI</span>
     </div>
   );
