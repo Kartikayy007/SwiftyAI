@@ -19,8 +19,9 @@ export function ArticlePanel({ card, onClose, className }: ArticlePanelProps) {
       aria-modal="true"
       aria-labelledby="article-panel-title"
       className={cn(
-        "absolute top-0 right-0 bottom-0 z-20 flex w-[min(34%,24rem)] flex-col border-l border-foreground/30 bg-background",
+        "fixed inset-0 z-30 flex w-full flex-col bg-background",
         "animate-in fade-in slide-in-from-right-4 duration-200",
+        "sm:absolute sm:inset-y-0 sm:right-0 sm:left-auto sm:w-[min(34%,24rem)] sm:border-l sm:border-foreground/30",
         className
       )}
     >
@@ -34,7 +35,7 @@ export function ArticlePanel({ card, onClose, className }: ArticlePanelProps) {
       </button>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 px-7 pt-8 pb-6 pr-10">
+        <div className="shrink-0 px-5 pt-8 pb-6 pr-12 sm:px-7">
           <h2
             id="article-panel-title"
             className="text-[clamp(1.75rem,4vw,2.5rem)] font-black leading-[0.95] tracking-tight"

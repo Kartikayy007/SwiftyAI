@@ -1,9 +1,8 @@
 "use client";
 
 import { homeCards, type HomeCard } from "@/components/home/home-card-data";
-
-const gridBorder = "border-foreground/25";
-const gridDivide = "divide-x divide-foreground/25";
+import { gridBorder } from "@/lib/layout-tokens";
+import { cn } from "@/lib/utils";
 
 type HomeCardsProps = {
   className?: string;
@@ -13,39 +12,42 @@ type HomeCardsProps = {
 export function HomeCards({ className, onCardSelect }: HomeCardsProps) {
   return (
     <section
-      className={[className, `grid shrink-0 grid-cols-4 ${gridDivide} border-b ${gridBorder}`]
-        .filter(Boolean)
-        .join(" ")}
+      className={cn(
+        "grid shrink-0 grid-cols-1 border-b sm:grid-cols-2 lg:grid-cols-4",
+        "divide-y divide-foreground/25 sm:divide-x sm:divide-y-0",
+        gridBorder,
+        className
+      )}
     >
       {homeCards.map((card, i) => (
         <button
           key={card.title}
           type="button"
           onClick={() => onCardSelect(card)}
-          className={[
-            "group flex cursor-pointer flex-col justify-between p-6 text-left transition-opacity hover:opacity-80",
-            i === 0 ? "min-h-48" : "min-h-40",
+          className={cn(
+            "group flex cursor-pointer flex-col justify-between p-4 text-left transition-opacity hover:opacity-80 sm:p-6",
+            i === 0 ? "min-h-36 sm:min-h-48" : "min-h-32 sm:min-h-40",
             card.accent
               ? "bg-[var(--swift-orange)] text-black"
-              : "bg-background text-foreground",
-          ].join(" ")}
+              : "bg-background text-foreground"
+          )}
         >
           <div>
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-2 flex items-center justify-between sm:mb-3">
               <span
-                className={[
+                className={cn(
                   "text-[9px] font-bold tracking-widest uppercase",
-                  card.accent ? "text-black/70" : "text-muted-foreground",
-                ].join(" ")}
+                  card.accent ? "text-black/70" : "text-muted-foreground"
+                )}
                 style={{ fontFamily: "var(--font-fira-sans), sans-serif" }}
               >
                 {card.tag}
               </span>
               <span
-                className={[
+                className={cn(
                   "text-[9px] tracking-wide",
-                  card.accent ? "text-black/60" : "text-muted-foreground",
-                ].join(" ")}
+                  card.accent ? "text-black/60" : "text-muted-foreground"
+                )}
                 style={{ fontFamily: "var(--font-fira-sans), sans-serif" }}
               >
                 {card.date}
@@ -59,10 +61,10 @@ export function HomeCards({ className, onCardSelect }: HomeCardsProps) {
             </h2>
           </div>
           <span
-            className={[
-              "mt-4 text-[10px] font-semibold tracking-widest uppercase",
-              card.accent ? "text-black/70" : "text-muted-foreground",
-            ].join(" ")}
+            className={cn(
+              "mt-3 text-[10px] font-semibold tracking-widest uppercase sm:mt-4",
+              card.accent ? "text-black/70" : "text-muted-foreground"
+            )}
             style={{ fontFamily: "var(--font-fira-sans), sans-serif" }}
           >
             Read →

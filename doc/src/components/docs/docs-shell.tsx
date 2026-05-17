@@ -24,15 +24,15 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <div className={cn("min-h-screen bg-background", pagePaddingX)}>
-      <div className={cn("flex min-h-screen flex-col border-x", gridBorder)}>
+    <div className={cn("min-h-dvh bg-background", pagePaddingX)}>
+      <div className={cn("flex min-h-dvh flex-col border-x", gridBorder)}>
         <header
           className={cn(
             "sticky top-0 z-40 shrink-0 border-b bg-background/90 backdrop-blur",
             gridBorder
           )}
         >
-          <div className={cn("flex h-14 items-center gap-3", sectionPaddingX)}>
+          <div className={cn("flex h-14 items-center gap-2 sm:gap-3", sectionPaddingX)}>
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger
                 render={
@@ -56,7 +56,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
               </SheetContent>
             </Sheet>
 
-            <Link href="/docs" className="shrink-0">
+            <Link href="/docs" className="min-w-0 shrink-0 [&_span]:hidden sm:[&_span]:inline">
               <SwiftyLogo />
             </Link>
 

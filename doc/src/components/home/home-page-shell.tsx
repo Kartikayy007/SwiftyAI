@@ -3,16 +3,33 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { Menu } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import AsciiArtDemo from "@/components/ui/ascii-art-demo";
 import { HomeCards } from "@/components/home/home-cards";
 import { ArticlePanel } from "@/components/home/article-panel";
 import type { HomeCard } from "@/components/home/home-card-data";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { gridBorder, pagePaddingX, sectionPaddingX } from "@/lib/layout-tokens";
 import { cn } from "@/lib/utils";
 
+const navLinks = [
+  ["DOCS", "/docs"],
+  ["QUICKSTART", "/docs/quickstart"],
+  ["PROVIDERS", "/docs/providers"],
+  ["GITHUB", "https://github.com/Kartikayy007/SwiftyAI"],
+] as const;
+
 export function HomePageShell() {
   const [activeCard, setActiveCard] = React.useState<HomeCard | null>(null);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const panelOpen = activeCard !== null;
 
   const closePanel = () => setActiveCard(null);
@@ -29,16 +46,16 @@ export function HomePageShell() {
   return (
     <div
       className={cn(
-        "flex h-screen flex-col overflow-hidden text-foreground transition-[background] duration-200",
+        "flex min-h-dvh flex-col overflow-x-hidden text-foreground transition-[background] duration-200",
         pagePaddingX,
         panelOpen ? "hatch-bg" : "bg-background"
       )}
       style={{ fontFamily: "var(--font-inter), var(--font-fira-sans), sans-serif" }}
     >
-      <div className={cn("flex min-h-0 flex-1 flex-col border-x", gridBorder)}>
+      <div className={cn("flex min-h-dvh flex-1 flex-col border-x", gridBorder)}>
         <header className={cn("shrink-0 border-b py-3", gridBorder, sectionPaddingX)}>
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <Link href="/" className="flex shrink-0 items-center gap-2">
               <Image
                 src="/swiftyAIlogo.png"
                 alt="SwiftyAI"
@@ -54,13 +71,8 @@ export function HomePageShell() {
               </span>
             </Link>
 
-            <nav className="flex items-center gap-5">
-              {[
-                ["DOCS", "/docs"],
-                ["QUICKSTART", "/docs/quickstart"],
-                ["PROVIDERS", "/docs/providers"],
-                ["GITHUB", "https://github.com/Kartikayy007/SwiftyAI"],
-              ].map(([label, href]) => (
+            <nav className="hidden items-center gap-4 md:flex md:gap-5">
+              {navLinks.map(([label, href]) => (
                 <Link
                   key={label}
                   href={href}
@@ -73,10 +85,44 @@ export function HomePageShell() {
               ))}
               <ThemeToggle />
             </nav>
+
+            <div className="flex items-center gap-1 md:hidden">
+              <ThemeToggle />
+              <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+                <SheetTrigger
+                  render={
+                    <Button variant="ghost" size="icon" aria-label="Open menu" />
+                  }
+                >
+                  <Menu className="h-5 w-5" />
+                </SheetTrigger>
+                <SheetContent side="right" className="w-full max-w-xs p-0">
+                  <SheetHeader className="border-b px-4 py-3 text-left">
+                    <SheetTitle>Menu</SheetTitle>
+                  </SheetHeader>
+                  <nav className="flex flex-col p-2">
+                    {navLinks.map(([label, href]) => (
+                      <Link
+                        key={label}
+                        href={href}
+                        onClick={() => setMenuOpen(false)}
+                        className="rounded-md px-3 py-3 text-sm font-semibold tracking-widest text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        style={{ fontFamily: "var(--font-fira-sans), sans-serif" }}
+                        {...(href.startsWith("http")
+                          ? { target: "_blank", rel: "noopener noreferrer" }
+                          : {})}
+                      >
+                        {label}
+                      </Link>
+                    ))}
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </header>
 
-        <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden lg:overflow-hidden">
           {panelOpen ? (
             <button
               type="button"
@@ -88,19 +134,20 @@ export function HomePageShell() {
 
           <main
             className={cn(
-              "relative z-0 flex min-h-0 flex-1 flex-col justify-between py-8 transition-opacity",
+              "relative z-0 flex min-h-0 flex-1 flex-col overflow-y-auto transition-opacity",
+              "py-6 sm:justify-between sm:py-8",
               panelOpen && "opacity-50"
             )}
           >
-            <section className={cn("shrink-0 border-b pb-10", gridBorder, sectionPaddingX)}>
-              <div className="flex flex-row items-center gap-10 lg:gap-12">
-                <div className="flex-1">
+            <section className={cn("shrink-0 border-b pb-8 sm:pb-10", gridBorder, sectionPaddingX)}>
+              <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-center lg:gap-12">
+                <div className="w-full flex-1 text-center lg:text-left">
                   <h1
                     className="font-black leading-[0.88] tracking-tight text-foreground"
                     style={{
                       fontFamily: "var(--font-fira-sans), sans-serif",
                       fontWeight: 900,
-                      fontSize: "clamp(3.5rem,8vw,6.5rem)",
+                      fontSize: "clamp(2.5rem,10vw,6.5rem)",
                     }}
                   >
                     <span
@@ -119,18 +166,18 @@ export function HomePageShell() {
                     <span className="block">For Apple Devs</span>
                   </h1>
                   <p
-                    className="mt-5 max-w-xl leading-snug text-muted-foreground"
+                    className="mx-auto mt-4 max-w-xl leading-snug text-muted-foreground sm:mt-5 lg:mx-0"
                     style={{
                       fontFamily: "var(--font-playfair), Georgia, serif",
                       fontStyle: "italic",
-                      fontSize: "clamp(1.05rem,1.9vw,1.35rem)",
+                      fontSize: "clamp(1rem,2.5vw,1.35rem)",
                     }}
                   >
                     Build intelligent iOS, macOS, watchOS, and tvOS apps with a&nbsp;native Swift API for
                     streaming, tool calling, and multimodal AI.
                   </p>
                 </div>
-                <div className="relative aspect-square w-[min(42vw,400px)] shrink-0 overflow-hidden">
+                <div className="relative mx-auto aspect-square w-full max-w-[280px] shrink-0 overflow-hidden sm:max-w-[320px] lg:mx-0 lg:w-[min(42vw,400px)] lg:max-w-none">
                   <AsciiArtDemo />
                 </div>
               </div>
@@ -138,7 +185,7 @@ export function HomePageShell() {
 
             <HomeCards onCardSelect={setActiveCard} />
 
-            <div className={cn("shrink-0 border-b py-6", gridBorder)} aria-hidden />
+            <div className={cn("hidden shrink-0 border-b py-6 sm:block", gridBorder)} aria-hidden />
           </main>
 
           {activeCard ? <ArticlePanel card={activeCard} onClose={closePanel} /> : null}
