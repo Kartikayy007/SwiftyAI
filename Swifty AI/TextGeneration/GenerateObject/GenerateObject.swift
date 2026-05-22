@@ -74,18 +74,11 @@ public func generateObject<T: Decodable>(
     }
 }
 
-<<<<<<< HEAD
-public func generateObject<T: Decodable & JSONSchemaConvertible>(
-    model: String,
-    prompt: String,
-    as type: T.Type = T.self
-=======
 public func generateObject<T: Decodable>(
     model: some AIModel,
     prompt: [AIMessageContent],
     output: Output<T>,
     options: GenerationOptions = GenerationOptions()
->>>>>>> development
 ) async throws -> ObjectResponse<T> {
     let fullPrompt = try structuredOutputPrompt(prompt: prompt, schema: output.schema)
     let response = try await model.generate(fullPrompt, options: options)

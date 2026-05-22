@@ -75,11 +75,17 @@ final class AIRegistryTests: XCTestCase {
         await registry.set(.apiKey("sk-test"), for: "openai")
         let m1 = try await registry.resolve("openai/gpt-4o")
         let m2 = try await registry.resolve("openai/gpt-4o")
-        // Both are valid — registry does not cache instances
         XCTAssertTrue(m1 is OpenAICompatibleProvider)
         XCTAssertTrue(m2 is OpenAICompatibleProvider)
-        // They are separate instances (identity not equatable, but both created fresh)
         XCTAssertFalse(m1 as AnyObject === m2 as AnyObject)
+    }
+
+    func testConfigureIsImmediatelyVisible() async throws {
+        AI.configure { ai in
+            ai.openAI(apiKey: "sk-immediate")
+        }
+        let model = try await AIRegistry.shared.resolve("openai/gpt-4o-mini")
+        XCTAssertTrue(model is OpenAICompatibleProvider)
     }
 
     func testGenerateTextStringOverload() async throws {

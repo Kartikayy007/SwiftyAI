@@ -32,6 +32,14 @@ let tools = mcpTools.asAITools(client: client)
 The core SDK stays transport-agnostic. HTTP, stdio, WebSocket, local process, and in-memory test transports all fit behind the same JSON data I/O method.
 
 ```swift
+public protocol MCPTransport: Sendable {
+    func send(_ data: Data, expectsResponse: Bool) async throws -> Data?
+}
+```
+
+Return the decoded JSON-RPC response bytes when `expectsResponse` is `true`. Return `nil` for fire-and-forget notifications.
+
+```swift
 actor TestTransport: MCPTransport {
     private var responses: [Data?]
 
@@ -67,6 +75,25 @@ print(result.text)
 ```
 
 When an MCP tool returns text content, the adapter sends that text back to the model. If the MCP result is marked as an error, the adapter throws `MCPToolExecutionError` so the normal tool error policy decides whether to return an error result or fail fast.
+
+## Calling Tools Directly
+
+The adapter is for agent loops. App code can also call MCP tools without a model.
+
+```swift
+let result = try await client.callTool(
+    name: "lookup_order",
+    arguments: ["orderID": .string(order.id)]
+)
+
+if result.isError == true {
+    throw MCPToolExecutionError(toolName: "lookup_order", result: result)
+}
+
+let text = result.textContent
+```
+
+`MCPClient` also negotiates a protocol version on `initialize()`. The default is `MCPClient.defaultProtocolVersion`; pass a different `protocolVersion:` at init when the server requires it. If the server responds with a different version, `initialize()` throws `MCPClientError.unsupportedProtocolVersion`.
 
 <Related>
 Read [tools](/docs/tools), [tool calling](/docs/tool-calling), and [agent UI stream](/docs/agent-ui-stream).

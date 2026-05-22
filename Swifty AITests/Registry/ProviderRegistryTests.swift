@@ -115,6 +115,16 @@ final class ProviderRegistryTests: XCTestCase {
         }
     }
 
+    func testProviderIdIsCaseInsensitive() throws {
+        let language = RegistryMockModel("language")
+        let registry = createProviderRegistry([
+            "mock": customProvider(languageModels: ["chat": language])
+        ])
+        XCTAssertTrue((try registry.model("Mock/chat") as? RegistryMockModel) === language)
+        XCTAssertTrue((try registry.model("MOCK/chat") as? RegistryMockModel) === language)
+        XCTAssertThrowsError(try registry.model("mock/CHAT"))
+    }
+
     func testWrongModalityThrowsUnsupportedFeature() throws {
         let registry = createProviderRegistry([
             "mock": customProvider(languageModels: ["text": RegistryMockModel("text")])

@@ -16,12 +16,22 @@ public extension AIStreamModel {
     }
 
     func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        let prompt = messages.last(where: { $0.role == .user })?.content ?? ""
-        return stream(prompt)
+        stream(messages: messages, options: GenerationOptions())
     }
 
+    /// Default implementation forwards `options` through to the array-prompt variant,
+    /// extracting a leading system-role message into `options.system` when not already set.
+    /// Providers that need multi-turn-aware bodies should override this directly.
     func stream(messages: [ChatMessage], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        stream(messages: messages)
+        var opts = options
+        var working = messages
+        if opts.system == nil, let first = working.first, first.role == .system {
+            opts.system = first.content
+            working.removeFirst()
+        }
+        // Use the most recent user message's parts to preserve multimodal content.
+        let parts = working.last(where: { $0.role == .user })?.parts ?? [.text("")]
+        return stream(parts, options: opts)
     }
 }
 

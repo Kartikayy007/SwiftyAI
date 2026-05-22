@@ -26,14 +26,25 @@ public struct AppleFoundationProvider: AIModel, AIStreamModel, AIToolCallingMode
     }
 
     public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        let formatted = messages.map { msg in
+        stream(messages: messages, options: GenerationOptions())
+    }
+
+    /// Note: Apple's `LanguageModelSession.streamResponse(to:)` does not currently surface
+    /// per-request controls (temperature, maxTokens, etc.), so `options` is ignored here
+    /// except for `options.system`, which is prepended to the formatted prompt when set.
+    public func stream(messages: [ChatMessage], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        var lines = [String]()
+        if let system = options.system {
+            lines.append("System: \(system)")
+        }
+        for msg in messages {
             switch msg.role {
-            case .system: return "System: \(msg.content)"
-            case .user: return "User: \(msg.content)"
-            case .assistant: return "Assistant: \(msg.content)"
+            case .system: lines.append("System: \(msg.content)")
+            case .user: lines.append("User: \(msg.content)")
+            case .assistant: lines.append("Assistant: \(msg.content)")
             }
-        }.joined(separator: "\n")
-        return stream(formatted)
+        }
+        return stream(lines.joined(separator: "\n"))
     }
 
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {

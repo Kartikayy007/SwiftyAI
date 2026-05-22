@@ -61,7 +61,13 @@ public struct AnthropicProvider: AIModel, AIStreamModel, AIToolCallingModel {
     }
 
     public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        let system = messages.first(where: { $0.role == .system })?.content
+        stream(messages: messages, options: GenerationOptions())
+    }
+
+    public func stream(messages: [ChatMessage], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        // Anthropic takes `system` as a top-level field. Prefer the options.system value;
+        // fall back to a leading system-role message from the history if present.
+        let system = options.system ?? messages.first(where: { $0.role == .system })?.content
         let convo: [Request.Message]
         do {
             convo = try messages
@@ -70,7 +76,7 @@ public struct AnthropicProvider: AIModel, AIStreamModel, AIToolCallingModel {
         } catch {
             return AsyncThrowingStream { $0.finish(throwing: error) }
         }
-        return streamSSE(messages: convo, system: system, options: GenerationOptions())
+        return streamSSE(messages: convo, system: system, options: options)
     }
 
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {

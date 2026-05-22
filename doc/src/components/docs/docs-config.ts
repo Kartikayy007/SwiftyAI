@@ -56,7 +56,6 @@ export const docsNavGroups = [
     title: "Utilities",
     items: [
       { title: "Middleware", href: "/docs/middleware" },
-      { title: "Telemetry", href: "/docs/telemetry" },
       { title: "Utilities", href: "/docs/utilities" },
       { title: "Message Management", href: "/docs/message-management" },
       { title: "Streaming Utilities", href: "/docs/streaming-utilities" },

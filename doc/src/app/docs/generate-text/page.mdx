@@ -38,6 +38,27 @@ print("output:", usage?.outputTokens ?? 0)
 
 `usage`, `model`, and `finishReason` are optional because not every provider returns them for every request.
 
+`TokenUsage` exposes `inputTokens`, `outputTokens`, optional `totalTokens`, and optional `cachedInputTokens`. The full `AIResponse` initializer is `AIResponse(text:model:usage:finishReason:)`, which is useful in custom providers and test doubles.
+
+## Errors
+
+SDK calls throw `AIError`. The cases are:
+
+| Case | When |
+| --- | --- |
+| `networkError(Error)` | The transport failed (DNS, timeout, TLS, cancellation wrapped from `URLSession`) |
+| `apiError(statusCode: Int, message: String)` | The provider returned a non-2xx HTTP response |
+| `invalidResponse` | The provider returned a response that could not be parsed at all |
+| `encodingError(Error)` / `decodingError(Error)` | Request encoding or response decoding threw |
+| `providerNotConfigured(String)` | A model string used a provider prefix that `AI.configure` was not called for |
+| `invalidModelString(String)` | A model string is not in `"provider/model"` shape |
+| `unsupportedFeature(String)` | The resolved provider cannot perform the requested operation |
+| `toolNotFound(String)` | The model called a tool name that was not registered |
+| `maxStepsExceeded(Int)` | A tool loop hit its `maxSteps` cap |
+| `schemaValidationFailed([AISchemaValidationIssue])` | `generateObject` decoded JSON that violates the schema |
+
+`AIError` conforms to `LocalizedError`, so `error.localizedDescription` returns a readable message for logs and UI.
+
 ## System Prompt And Sampling
 
 Use `GenerationOptions` to describe behavior that belongs to one request:
