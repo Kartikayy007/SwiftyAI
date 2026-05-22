@@ -140,6 +140,80 @@ final class MediaGenerationTests: XCTestCase {
         XCTAssertEqual(response.id, "video_1")
     }
 
+    func testOpenAIImageGenerationThrowsInvalidResponseForEmptyImages() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 200, json: ["data": [["revised_prompt": "better"]]])
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: "test", model: "gpt-image-1", session: .mock)
+
+        do {
+            _ = try await generateImage(model: provider, prompt: "Robot")
+            XCTFail("Expected invalid response")
+        } catch AIError.invalidResponse {}
+    }
+
+    func testOpenAITranscriptionThrowsOnInvalidJSONResponse() async throws {
+        MockURLProtocol.handler = { _ in
+            Self.dataResponse(statusCode: 200, data: Data("not json".utf8), contentType: "application/json")
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: "test", model: "gpt-4o-transcribe", session: .mock)
+
+        do {
+            _ = try await transcribe(model: provider, audio: AIAudioInput(data: Data("audio".utf8), filename: "clip.wav", mediaType: .wav))
+            XCTFail("Expected decoding error")
+        } catch AIError.decodingError {}
+    }
+
+    func testOpenAISpeechThrowsAPIError() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 500, json: ["error": ["message": "speech failed"]])
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: "test", model: "gpt-4o-mini-tts", session: .mock)
+
+        do {
+            _ = try await generateSpeech(model: provider, text: "Hello")
+            XCTFail("Expected API error")
+        } catch AIError.apiError(let statusCode, let message) {
+            XCTAssertEqual(statusCode, 500)
+            XCTAssertEqual(message, "speech failed")
+        }
+    }
+
+    func testOpenAIVideoThrowsWhenJobFails() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 200, json: ["id": "video_1", "status": "failed", "error": ["message": "render failed"]])
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: "test", model: "sora-2", session: .mock)
+
+        do {
+            _ = try await generateVideo(model: provider, prompt: "Logo", options: VideoGenerationOptions(pollInterval: .zero, maxPollAttempts: 1))
+            XCTFail("Expected failed video job")
+        } catch AIError.apiError(let statusCode, let message) {
+            XCTAssertEqual(statusCode, 500)
+            XCTAssertEqual(message, "render failed")
+        }
+    }
+
+    func testOpenAIVideoThrowsWhenPollingTimesOut() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 200, json: ["id": "video_1", "status": "queued"])
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: "test", model: "sora-2", session: .mock)
+
+        do {
+            _ = try await generateVideo(model: provider, prompt: "Logo", options: VideoGenerationOptions(pollInterval: .zero, maxPollAttempts: 1))
+            XCTFail("Expected timeout")
+        } catch AIError.apiError(let statusCode, let message) {
+            XCTAssertEqual(statusCode, 408)
+            XCTAssertTrue(message.contains("did not complete"))
+        }
+    }
+
     func testGeminiImageGenerationEncodesImagenParameters() async throws {
         var body: [String: Any]?
         MockURLProtocol.handler = { request in
@@ -239,6 +313,249 @@ final class MediaGenerationTests: XCTestCase {
             "https://files.example.com/video.mp4",
         ])
         XCTAssertEqual(response.data, Data("mp4".utf8))
+    }
+
+    func testGeminiImageGenerationThrowsForEmptyPredictions() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 200, json: ["predictions": []])
+        }
+
+        let provider = GeminiProvider(apiKey: "test", model: "imagen-4.0-generate-001", session: .mock)
+
+        do {
+            _ = try await generateImage(model: provider, prompt: "Robot")
+            XCTFail("Expected invalid response")
+        } catch AIError.invalidResponse {}
+    }
+
+    func testGeminiImageGenerationThrowsForInvalidBase64() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 200, json: ["predictions": [["bytesBase64Encoded": "not-base64", "mimeType": "image/png"]]])
+        }
+
+        let provider = GeminiProvider(apiKey: "test", model: "imagen-4.0-generate-001", session: .mock)
+
+        do {
+            _ = try await generateImage(model: provider, prompt: "Robot")
+            XCTFail("Expected invalid response")
+        } catch AIError.invalidResponse {}
+    }
+
+    func testGeminiSpeechThrowsWhenInlineDataIsMissing() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 200, json: ["candidates": [["content": ["parts": [["text": "no audio"]]]]]])
+        }
+
+        let provider = GeminiProvider(apiKey: "test", model: "gemini-3.1-flash-tts-preview", session: .mock)
+
+        do {
+            _ = try await generateSpeech(model: provider, text: "Hello")
+            XCTFail("Expected invalid response")
+        } catch AIError.invalidResponse {}
+    }
+
+    func testGeminiVideoThrowsOperationError() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 200, json: ["name": "operations/video_1", "done": true, "error": ["code": 400, "message": "bad prompt"]])
+        }
+
+        let provider = GeminiProvider(apiKey: "test", model: "veo-3.1-generate-preview", session: .mock)
+
+        do {
+            _ = try await generateVideo(model: provider, prompt: "bad", options: VideoGenerationOptions(pollInterval: .zero, maxPollAttempts: 1))
+            XCTFail("Expected operation error")
+        } catch AIError.apiError(let statusCode, let message) {
+            XCTAssertEqual(statusCode, 400)
+            XCTAssertEqual(message, "bad prompt")
+        }
+    }
+
+    func testGeminiVideoThrowsWhenPollingTimesOut() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 200, json: ["name": "operations/video_1", "done": false])
+        }
+
+        let provider = GeminiProvider(apiKey: "test", model: "veo-3.1-generate-preview", session: .mock)
+
+        do {
+            _ = try await generateVideo(model: provider, prompt: "Logo", options: VideoGenerationOptions(pollInterval: .zero, maxPollAttempts: 1))
+            XCTFail("Expected timeout")
+        } catch AIError.apiError(let statusCode, let message) {
+            XCTAssertEqual(statusCode, 408)
+            XCTAssertTrue(message.contains("did not complete"))
+        }
+    }
+
+    func testGeminiVideoThrowsWhenCompletedOperationHasNoURI() async throws {
+        MockURLProtocol.handler = { _ in
+            try mockResponse(statusCode: 200, json: ["name": "operations/video_1", "done": true, "response": ["generatedVideos": []]])
+        }
+
+        let provider = GeminiProvider(apiKey: "test", model: "veo-3.1-generate-preview", session: .mock)
+
+        do {
+            _ = try await generateVideo(model: provider, prompt: "Logo", options: VideoGenerationOptions(pollInterval: .zero, maxPollAttempts: 1))
+            XCTFail("Expected invalid response")
+        } catch AIError.invalidResponse {}
+    }
+
+    func testLiveOpenAIImageGeneration() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let apiKey = env["OPENAI_API_KEY"], !apiKey.isEmpty else {
+            throw XCTSkip("Set OPENAI_API_KEY to run live OpenAI image generation test.")
+        }
+        guard let modelName = env["OPENAI_IMAGE_MODEL"], !modelName.isEmpty else {
+            throw XCTSkip("Set OPENAI_IMAGE_MODEL to run live OpenAI image generation test.")
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: apiKey, model: modelName)
+
+        do {
+            let response = try await generateImage(
+                model: provider,
+                prompt: "A tiny blue square icon.",
+                options: ImageGenerationOptions(count: 1, size: .square1024, format: .png)
+            )
+            XCTAssertFalse(response.images.isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "OpenAI image")
+        }
+    }
+
+    func testLiveOpenAISpeechGeneration() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let apiKey = env["OPENAI_API_KEY"], !apiKey.isEmpty else {
+            throw XCTSkip("Set OPENAI_API_KEY to run live OpenAI speech test.")
+        }
+        guard let modelName = env["OPENAI_SPEECH_MODEL"], !modelName.isEmpty else {
+            throw XCTSkip("Set OPENAI_SPEECH_MODEL to run live OpenAI speech test.")
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: apiKey, model: modelName)
+
+        do {
+            let response = try await generateSpeech(model: provider, text: "Hello from SwiftyAI tests.", options: SpeechOptions(format: .mp3))
+            XCTAssertFalse(response.data.isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "OpenAI speech")
+        }
+    }
+
+    func testLiveOpenAITranscription() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let apiKey = env["OPENAI_API_KEY"], !apiKey.isEmpty else {
+            throw XCTSkip("Set OPENAI_API_KEY to run live OpenAI transcription test.")
+        }
+        guard let modelName = env["OPENAI_TRANSCRIPTION_MODEL"], !modelName.isEmpty else {
+            throw XCTSkip("Set OPENAI_TRANSCRIPTION_MODEL to run live OpenAI transcription test.")
+        }
+        guard let samplePath = env["OPENAI_TRANSCRIPTION_SAMPLE_PATH"], !samplePath.isEmpty else {
+            throw XCTSkip("Set OPENAI_TRANSCRIPTION_SAMPLE_PATH to a local audio file for live OpenAI transcription test.")
+        }
+
+        let audioURL = URL(fileURLWithPath: samplePath)
+        let audioData = try Data(contentsOf: audioURL)
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: apiKey, model: modelName)
+
+        do {
+            let response = try await transcribe(
+                model: provider,
+                audio: AIAudioInput(data: audioData, filename: audioURL.lastPathComponent, mediaType: .wav)
+            )
+            XCTAssertFalse(response.text.isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "OpenAI transcription")
+        }
+    }
+
+    func testLiveOpenAIVideoGeneration() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard env["RUN_EXPENSIVE_LIVE_MEDIA_TESTS"] == "1" else {
+            throw XCTSkip("Set RUN_EXPENSIVE_LIVE_MEDIA_TESTS=1 to run live video generation tests.")
+        }
+        guard let apiKey = env["OPENAI_API_KEY"], !apiKey.isEmpty else {
+            throw XCTSkip("Set OPENAI_API_KEY to run live OpenAI video test.")
+        }
+        guard let modelName = env["OPENAI_VIDEO_MODEL"], !modelName.isEmpty else {
+            throw XCTSkip("Set OPENAI_VIDEO_MODEL to run live OpenAI video test.")
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: apiKey, model: modelName)
+
+        do {
+            let response = try await generateVideo(
+                model: provider,
+                prompt: "A simple animated blue square.",
+                options: VideoGenerationOptions(seconds: 4, pollInterval: .seconds(5), maxPollAttempts: 60)
+            )
+            XCTAssertFalse(response.data.isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "OpenAI video")
+        }
+    }
+
+    func testLiveGeminiImageGeneration() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let apiKey = env["GEMINI_API_KEY"], !apiKey.isEmpty else {
+            throw XCTSkip("Set GEMINI_API_KEY to run live Gemini image test.")
+        }
+        guard let modelName = env["GEMINI_IMAGE_MODEL"], !modelName.isEmpty else {
+            throw XCTSkip("Set GEMINI_IMAGE_MODEL to run live Gemini image test.")
+        }
+
+        let provider = GeminiProvider(apiKey: apiKey, model: modelName)
+
+        do {
+            let response = try await generateImage(model: provider, prompt: "A tiny blue square icon.", options: ImageGenerationOptions(count: 1))
+            XCTAssertFalse(response.images.isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "Gemini image")
+        }
+    }
+
+    func testLiveGeminiSpeechGeneration() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let apiKey = env["GEMINI_API_KEY"], !apiKey.isEmpty else {
+            throw XCTSkip("Set GEMINI_API_KEY to run live Gemini speech test.")
+        }
+        guard let modelName = env["GEMINI_SPEECH_MODEL"], !modelName.isEmpty else {
+            throw XCTSkip("Set GEMINI_SPEECH_MODEL to run live Gemini speech test.")
+        }
+
+        let provider = GeminiProvider(apiKey: apiKey, model: modelName)
+
+        do {
+            let response = try await generateSpeech(model: provider, text: "Hello from SwiftyAI tests.", options: SpeechOptions(voice: "Kore", format: .pcm))
+            XCTAssertFalse(response.data.isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "Gemini speech")
+        }
+    }
+
+    func testLiveGeminiVideoGeneration() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard env["RUN_EXPENSIVE_LIVE_MEDIA_TESTS"] == "1" else {
+            throw XCTSkip("Set RUN_EXPENSIVE_LIVE_MEDIA_TESTS=1 to run live video generation tests.")
+        }
+        guard let apiKey = env["GEMINI_API_KEY"], !apiKey.isEmpty else {
+            throw XCTSkip("Set GEMINI_API_KEY to run live Gemini video test.")
+        }
+        guard let modelName = env["GEMINI_VIDEO_MODEL"], !modelName.isEmpty else {
+            throw XCTSkip("Set GEMINI_VIDEO_MODEL to run live Gemini video test.")
+        }
+
+        let provider = GeminiProvider(apiKey: apiKey, model: modelName)
+
+        do {
+            let response = try await generateVideo(
+                model: provider,
+                prompt: "A simple animated blue square.",
+                options: VideoGenerationOptions(aspectRatio: "16:9", pollInterval: .seconds(5), maxPollAttempts: 60)
+            )
+            XCTAssertFalse(response.data.isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "Gemini video")
+        }
     }
 
     private static func jsonBody(from request: URLRequest) throws -> [String: Any] {
