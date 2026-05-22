@@ -1,3 +1,5 @@
+import { Check, X } from "lucide-react";
+
 # Providers
 
 SwiftyAI includes concrete providers plus an OpenAI-compatible adapter. The SDK API stays the same; the provider decides how requests are encoded.
@@ -5,8 +7,8 @@ SwiftyAI includes concrete providers plus an OpenAI-compatible adapter. The SDK 
 | Provider family | Typical use |
 | --- | --- |
 | `OpenAICompatibleProvider` | OpenAI, Groq, OpenRouter, Mistral, Cohere, Cloudflare, Ollama, and private gateways |
-| `AnthropicProvider` | Claude text, streaming, and tool-capable workflows |
-| `GeminiProvider` | Gemini text, streaming, tool-capable workflows, and Gemini media |
+| `AnthropicProvider` | Claude text, streaming, and tool-loop workflows through `AIToolCallingModel` |
+| `GeminiProvider` | Gemini text, streaming, tool-loop workflows through `AIToolCallingModel`, and Gemini media |
 | `AppleFoundationProvider` | On-device Apple Intelligence when available |
 | `ProviderRegistry` | App-local or test-local custom model strings |
 
@@ -39,6 +41,140 @@ let response = try await generateText(
 )
 ```
 
+## Capability Matrix
+
+SwiftyAI has nine model-string provider prefixes plus the conditional `AppleFoundationProvider`. A check means the provider has public docs for the capability and SwiftyAI has a matching provider path. Model choice, account access, and regional limits can still reject a call.
+
+<table>
+  <thead>
+    <tr>
+      <th>Provider</th>
+      <th>Text</th>
+      <th>Stream</th>
+      <th>Tools</th>
+      <th>Multimodal input</th>
+      <th>Image gen</th>
+      <th>Transcription</th>
+      <th>Speech</th>
+      <th>Video gen</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>OpenAI</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+    </tr>
+    <tr>
+      <td>Anthropic</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+    </tr>
+    <tr>
+      <td>Gemini</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+    </tr>
+    <tr>
+      <td>Groq</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+    </tr>
+    <tr>
+      <td>OpenRouter</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+    </tr>
+    <tr>
+      <td>Mistral</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+    </tr>
+    <tr>
+      <td>Cohere</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+    </tr>
+    <tr>
+      <td>Cloudflare</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+    </tr>
+    <tr>
+      <td>Ollama</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+    </tr>
+    <tr>
+      <td>Apple Foundation</td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><Check aria-label="Supported" className="mx-auto h-4 w-4 text-emerald-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+      <td><X aria-label="Not supported" className="mx-auto h-4 w-4 text-red-600" /></td>
+    </tr>
+  </tbody>
+</table>
+
+Mistral image generation and Cohere transcription exist in provider-specific APIs, but SwiftyAI does not currently have dedicated provider adapters for those endpoint shapes. Cloudflare has media models in its catalog, but the OpenAI-compatible route used by SwiftyAI is documented for text generation.
+
 ## Direct Provider Types
 
 Use direct providers when you want explicit construction.
@@ -62,6 +198,20 @@ let gemini = GeminiProvider(
 ```
 
 `AppleFoundationProvider` is available when the target can import `FoundationModels`.
+
+Convenience typealiases exist for OpenAI-compatible endpoints:
+
+| Typealias | Concrete type |
+| --- | --- |
+| `OpenAIProvider` | `OpenAICompatibleProvider` |
+| `GroqProvider` | `OpenAICompatibleProvider` |
+| `OpenRouterProvider` | `OpenAICompatibleProvider` |
+| `MistralProvider` | `OpenAICompatibleProvider` |
+| `CohereProvider` | `OpenAICompatibleProvider` |
+| `CloudflareProvider` | `OpenAICompatibleProvider` |
+| `OllamaProvider` | `OpenAICompatibleProvider` |
+
+They are naming conveniences only; endpoint behavior still comes from the configured base URL and model.
 
 ## OpenAI-Compatible Providers
 

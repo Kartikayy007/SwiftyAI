@@ -83,6 +83,19 @@ let priority = try await generateObject(
 )
 ```
 
+## Guide Wrapper
+
+`Guide<Value>` is a public property wrapper that stores a wrapped value plus optional metadata such as `description`, `minimum`, `maximum`, `minLength`, `maxLength`, and `pattern`.
+
+```swift
+struct TicketSummary: Codable {
+    @Guide("Short customer-visible title", minLength: 3, maxLength: 80)
+    var title: String
+}
+```
+
+`Guide` is `Codable` when `Value` is `Codable`, and it encodes or decodes only the wrapped value. It does not automatically generate `AISchema` entries today, so structured output schemas still need `AISchemaConvertible`, `JSONSchemaConvertible`, or a manual `Output<T>`.
+
 ## Stream Partial JSON
 
 `streamObject` is useful when you want to show progress while waiting for a complete object.

@@ -152,24 +152,6 @@ final class GenerateWithToolsTests: XCTestCase {
         XCTAssertEqual(result.steps.first?.toolResults.first?.isError, true)
     }
 
-    func testTelemetryReceivesToolLifecycleEvents() async throws {
-        let model = MockToolCallingModel(responses: [
-            .init(text: "", toolCalls: [.init(id: "call_1", name: "noop", arguments: "{}")], finishReason: "tool_calls"),
-            .init(text: "done", toolCalls: [], finishReason: "stop")
-        ])
-        let noop = AITool(name: "noop", description: "", parameters: [:]) { _ in "ok" }
-        var eventCount = 0
-
-        _ = try await generateWithTools(
-            model: model,
-            prompt: "noop",
-            tools: [noop],
-            toolOptions: .init(onTelemetry: { _ in eventCount += 1 })
-        )
-
-        XCTAssertGreaterThanOrEqual(eventCount, 4)
-    }
-
     func testParallelToolCallsRunConcurrentlyAndPreserveOrder() async throws {
         actor ConcurrencyProbe {
             var active = 0

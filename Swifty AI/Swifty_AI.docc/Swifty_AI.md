@@ -2,7 +2,7 @@
 
 SwiftyAI is a provider-neutral Swift package for text generation, streaming,
 structured output, tool loops, multimodal prompts, media calls, SwiftUI state,
-middleware, telemetry, and MCP tool adapters.
+middleware, and MCP tool adapters.
 
 The package exposes plain Swift protocols and functions. You can pass concrete
 provider values directly, resolve built-in providers through `AI.configure`, or
@@ -256,8 +256,7 @@ Use `streamWithTools` for `AIAgentChunk` streams and `createAgentUIStream` for
 higher-level `AgentEvent` values.
 
 `ToolExecutionOptions` supports approval hooks, interception, tool-result
-callbacks, telemetry callbacks, parallel tool execution, and fail-fast error
-handling.
+callbacks, parallel tool execution, and fail-fast error handling.
 
 ## Middleware
 

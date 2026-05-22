@@ -195,8 +195,6 @@ func runToolLoop(
             onAgentEvent?(.toolCallFinished(AgentToolResultEvent(stepIndex: index, toolResult: result)))
             onEvent?(AIAgentChunk(stepIndex: index, toolResult: result))
         }
-        toolOptions.onTelemetry?(.completed(stepIndex: index))
-
         step = AIStep(
             index: index,
             text: response.text,
@@ -268,7 +266,6 @@ private func executeSingleToolCall(
     tools: [AITool],
     options: ToolExecutionOptions
 ) async throws -> AIToolResult {
-    options.onTelemetry?(.requested(originalCall))
     var call = originalCall
 
     if let decision = options.onToolCall?(call) {
@@ -276,12 +273,9 @@ private func executeSingleToolCall(
         case .execute:
             break
         case .reject(let reason):
-            options.onTelemetry?(.rejected(call, reason: reason))
             return .init(toolCallID: call.id, name: call.name, content: reason, isError: true)
         case .returnResult(let content):
-            let result = AIToolResult(toolCallID: call.id, name: call.name, content: content)
-            options.onTelemetry?(.skipped(call, reason: "Synthetic result returned by interceptor"))
-            return result
+            return AIToolResult(toolCallID: call.id, name: call.name, content: content)
         case .replaceArguments(let arguments):
             call = AIToolCall(id: call.id, name: call.name, arguments: arguments)
         }
@@ -290,35 +284,26 @@ private func executeSingleToolCall(
     if let decision = options.approval?(call) {
         switch decision {
         case .execute:
-            options.onTelemetry?(.approved(call))
+            break
         case .reject(let reason):
-            options.onTelemetry?(.rejected(call, reason: reason))
             return .init(toolCallID: call.id, name: call.name, content: reason, isError: true)
         case .returnResult(let content):
-            let result = AIToolResult(toolCallID: call.id, name: call.name, content: content)
-            options.onTelemetry?(.skipped(call, reason: "Synthetic result returned by approval"))
-            return result
+            return AIToolResult(toolCallID: call.id, name: call.name, content: content)
         case .replaceArguments(let arguments):
             call = AIToolCall(id: call.id, name: call.name, arguments: arguments)
-            options.onTelemetry?(.approved(call))
         }
     }
 
     guard let tool = tools.first(where: { $0.name == call.name }) else {
         let message = AIError.toolNotFound(call.name).localizedDescription
-        options.onTelemetry?(.failed(call, message: message))
         return .init(toolCallID: call.id, name: call.name, content: message, isError: true)
     }
 
     do {
-        options.onTelemetry?(.started(call))
         let content = try await tool.execute(parseToolArguments(call.arguments))
-        let result = AIToolResult(toolCallID: call.id, name: call.name, content: content)
-        options.onTelemetry?(.succeeded(call, result))
-        return result
+        return AIToolResult(toolCallID: call.id, name: call.name, content: content)
     } catch {
         let message = error.localizedDescription
-        options.onTelemetry?(.failed(call, message: message))
         if options.errorPolicy == .failFast {
             throw error
         }
