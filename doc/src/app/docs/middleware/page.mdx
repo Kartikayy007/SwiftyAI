@@ -30,7 +30,7 @@ let response = try await generateText(
 
 | Middleware | Use it for |
 | --- | --- |
-| `defaultSettingsMiddleware` | Applying default system prompts, sampling, headers, retries, and caching hints while letting explicit request options win |
+| `defaultSettingsMiddleware` | Applying default system prompts, sampling, headers, retries, and prompt-caching values while letting explicit request options win |
 | `extractJsonMiddleware` | Cleaning model output when JSON is wrapped in Markdown fences or prose |
 | `extractReasoningMiddleware` | Removing hidden reasoning tags before app code consumes the final text |
 | Custom `LanguageModelMiddleware` | Auditing, prompt rewriting, response decoration, internal policy checks, or test doubles |
@@ -59,6 +59,25 @@ for try await chunk in streamText(model: streaming, prompt: "Draft a reply.") {
 ```
 
 Use simulated streaming for demos, previews, tests, or model adapters that only expose full-response generation. Use native provider streams for production chat and long outputs when the provider supports them.
+
+## Image Middleware
+
+Image models use `ImageModelMiddleware` instead of `LanguageModelMiddleware`.
+
+```swift
+let wrappedImageModel = wrapImageModel(
+    imageModel,
+    middleware: [
+        ImageModelMiddleware { request, next in
+            var options = request.options
+            options.headers["X-Request-ID"] = requestID
+            return try await next.generate(prompt: request.prompt, options: options)
+        }
+    ]
+)
+```
+
+Use this for image-specific request tagging, policy checks, option defaults, and response inspection.
 
 ## Custom Middleware
 

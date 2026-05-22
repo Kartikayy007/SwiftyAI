@@ -2,13 +2,13 @@
 
 `AIChat` is a `@MainActor` and `@Observable` chat state object. It manages input, messages, loading state, errors, cancellation, and streaming assistant updates.
 
-| State | Meaning |
+| Public state or config | Meaning |
 | --- | --- |
 | `messages` | Visible chat history owned by the helper |
 | `input` | Editable user input bound to a text field |
 | `isLoading` | True while the assistant stream is active |
 | `error` | Last stream or model error |
-| `maxMessages` | Limit for history sent to the model |
+| Constructor `maxMessages` | Private limit for history sent to the model |
 
 ## State Model
 

@@ -30,6 +30,26 @@ let response = try await generateText(
 
 Direct construction is the clearest option for examples, previews, and tests because there is no shared registry state.
 
+For common built-in providers, `AIModel` also has static factory helpers:
+
+```swift
+let openAI: OpenAICompatibleProvider = .openAI(
+    apiKey: openAIKey,
+    model: "gpt-4o-mini"
+)
+
+let gemini: GeminiProvider = .gemini(
+    apiKey: geminiKey,
+    model: "gemini-2.0-flash"
+)
+
+let local: OpenAICompatibleProvider = .ollama(
+    model: "llama3.2"
+)
+```
+
+Available helpers are `.openAI`, `.groq`, `.openRouter`, `.mistral`, `.cohere`, `.cloudflare`, `.ollama`, `.anthropic`, `.gemini`, and `.appleFoundation()` when `FoundationModels` can be imported.
+
 ## Built-In Model Strings
 
 For app-level configuration, register providers once:

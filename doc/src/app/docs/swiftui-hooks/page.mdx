@@ -1,9 +1,10 @@
 # SwiftUI Hooks
 
-SwiftyAI includes two observable state helpers for SwiftUI apps:
+SwiftyAI includes three observable state helpers for SwiftUI apps:
 
 - `AIChat` for multi-turn chat with streaming assistant messages.
 - `AICompletion` for a single prompt and a single generated output.
+- `SwiftyChat` for async chat sends managed by your own task.
 
 They are state objects, not UI kits. You still build the view.
 
@@ -11,6 +12,7 @@ They are state objects, not UI kits. You still build the view.
 | --- | --- | --- |
 | `AIChat` | `messages`, `input`, `isLoading`, `error` | Support chat, copilots, conversational search, streaming assistants |
 | `AICompletion` | `input` / `output`, `isLoading`, `error` | Rewrite boxes, title generators, one-shot summaries |
+| `SwiftyChat` | `messages`, `isStreaming`, `error` | Async chat flows where the caller awaits `send(_:)` |
 | Direct model init | Model instance passed at construction | Previews, tests, dependency injection |
 | Model string init | `"provider/model"` plus `AI.configure` | App-wide provider setup |
 
@@ -90,5 +92,5 @@ let chat = AIChat(model: model, systemPrompt: "Answer as support.")
 Use direct models when previews or tests should not depend on global `AI.configure` state.
 
 <Related>
-Read [AIChat](/docs/ai-chat) and [AICompletion](/docs/ai-completion) for dedicated examples.
+Read [AIChat](/docs/ai-chat), [AICompletion](/docs/ai-completion), and [SwiftyChat](/docs/swifty-chat) for dedicated examples.
 </Related>

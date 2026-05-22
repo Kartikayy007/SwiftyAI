@@ -67,7 +67,6 @@ Dynamic tools are useful at integration boundaries, but typed tools make app cod
 | `onToolCall` | Before approval and execution | Rewrite arguments, return a cached result, block unsafe inputs |
 | `approval` | Before the tool closure runs | Ask the user, enforce policy, stop side effects |
 | `onToolResult` | After a tool returns | Update UI state, logs, or local caches |
-| `onTelemetry` | Throughout the lifecycle | Observe requested, started, succeeded, failed, and skipped events |
 
 ```swift
 let toolOptions = ToolExecutionOptions(
@@ -119,7 +118,7 @@ let accountTool = tool(
 }
 ```
 
-The model still receives the actual tool result as text. The schema helps tool-capable providers plan better calls.
+The model still receives the actual tool result as text. `outputSchema` is stored on the `AITool` value and is useful for your app, adapters, and MCP metadata, but the current OpenAI-compatible provider encoder only sends the input parameters to model providers.
 
 <Related>
 Read [tool calling](/docs/tool-calling) for loops, `maxSteps`, stop conditions, and callbacks.

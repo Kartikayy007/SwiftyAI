@@ -6,7 +6,7 @@
 | --- | --- |
 | `agentStarted` | Initialize timeline state |
 | `stepStarted` and `stepFinished` | Group model and tool work by loop step |
-| `modelChunk` | Append streamed assistant text |
+| `modelChunk` | Append assistant text returned for that loop step |
 | `toolCallStarted` | Show the requested tool and arguments |
 | `toolCallFinished` | Render tool output, status, or error |
 | `agentFinished` | Commit the final `AIStepResult` |
@@ -44,7 +44,7 @@ for try await event in events {
 }
 ```
 
-The stream yields events in the same order the loop executes them.
+The stream yields events in the same order the loop executes them. `modelChunk` is emitted after a model step completes; it is not token-by-token provider streaming.
 
 ## Callbacks For State Stores
 
@@ -71,7 +71,7 @@ This is useful in SwiftUI view models where `onEvent` updates observable state a
 
 ## When To Use This
 
-Use `streamWithTools` when your UI only needs text chunks plus tool call/result chunks. Use `createAgentUIStream` when the UI needs a full activity timeline: agent start, each step, each tool call, each result, final success, and failure.
+Use `streamWithTools` when your UI only needs per-step text plus tool call/result chunks. Use `createAgentUIStream` when the UI needs a full activity timeline: agent start, each step, each tool call, each result, final success, and failure.
 
 <Related>
 Agent UI streams use the same tools and stop conditions described in [tools](/docs/tools) and [tool calling](/docs/tool-calling).
