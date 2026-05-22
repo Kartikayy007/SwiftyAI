@@ -1,0 +1,54 @@
+# SwiftyChat
+
+`SwiftyChat` is an observable chat helper with an async `send(_:)` method. It is useful when you want to drive chat from your own task instead of using the `AIChat.send()` fire-and-forget helper.
+
+| Public state | Meaning |
+| --- | --- |
+| `messages` | Visible chat history owned by the helper |
+| `isStreaming` | True while `send(_:)` is consuming the stream |
+| `error` | Last stream or model error captured by the helper |
+
+## State Model
+
+```swift
+@State private var chat = SwiftyChat(
+    model: "openai/gpt-4o-mini",
+    systemPrompt: "You are a helpful support assistant.",
+    maxMessages: 30
+)
+```
+
+`SwiftyChat` can also be initialized with a direct `AIStreamModel`.
+
+```swift
+let provider = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: openAIKey,
+    model: "gpt-4o-mini"
+)
+
+let chat = SwiftyChat(model: provider)
+```
+
+## Sending
+
+```swift
+Task {
+    try await chat.send("How do I reset my API key?")
+}
+```
+
+`send(_:)` appends the user message, builds the model history, appends an empty assistant message, and fills that assistant message as stream chunks arrive. If another send is already streaming, it returns without starting a second stream.
+
+## Clearing
+
+```swift
+chat.stop()
+chat.clear()
+```
+
+`clear()` stops the current stream, clears `messages`, and clears `error`. `maxMessages` is constructor configuration; it prunes the history sent to the model while keeping the visible `messages` array as app state.
+
+<Related>
+Use [AIChat](/docs/ai-chat) when you want an input-bound `@MainActor` helper with `send()` and `reset()`. Use [message management](/docs/message-management) for chat history and `ContextWindow`.
+</Related>

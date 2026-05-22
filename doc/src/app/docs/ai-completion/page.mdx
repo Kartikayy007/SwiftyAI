@@ -2,13 +2,13 @@
 
 `AICompletion` is an observable state object for one prompt and one generated response. It is useful for rewrite tools, title generators, summary panels, and other non-chat UI.
 
-| State | Meaning |
+| Public state or config | Meaning |
 | --- | --- |
 | `input` / `prompt` | Editable text sent to the model |
 | `output` / `completion` | Generated text returned by the model |
 | `isLoading` | True while generation is active |
 | `error` | Last generation error |
-| `options` | Per-call `GenerationOptions` used by `send()` |
+| Constructor `options` | Private configuration used by `send()` |
 
 ## State Model
 

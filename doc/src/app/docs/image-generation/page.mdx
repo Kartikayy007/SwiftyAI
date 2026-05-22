@@ -43,7 +43,7 @@ After app startup configuration, you can use model strings:
 ```swift
 let response = try await generateImage(
     model: "openai/gpt-image-1",
-    prompt: "A product screenshot background for a SwiftAI demo.",
+    prompt: "A product screenshot background for a SwiftyAI demo.",
     options: ImageGenerationOptions(
         size: .landscape1536x1024,
         background: .opaque
@@ -82,3 +82,26 @@ Use the model name your provider account supports.
 | `headers` / `retryPolicy` | Add request metadata and recover from transient provider failures |
 
 Some options are provider-specific. Passing an option that a provider does not support may be ignored or rejected by that provider.
+
+## Image Middleware
+
+Image generation has its own middleware API:
+
+```swift
+let taggedImageModel = wrapImageModel(
+    imageModel,
+    middleware: [
+        ImageModelMiddleware { request, next in
+            var options = request.options
+            options.headers["X-Feature"] = "image-preview"
+
+            return try await next.generate(
+                prompt: request.prompt,
+                options: options
+            )
+        }
+    ]
+)
+```
+
+`ImageGenerationRequest` contains the prompt and options. `ImageModelContinuation` calls the next middleware or provider. The wrapper returns an `AIImageModel`.

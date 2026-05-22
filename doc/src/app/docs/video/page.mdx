@@ -50,13 +50,12 @@ let video = try await generateVideo(
     prompt: "A calm onboarding animation for a task app.",
     options: VideoGenerationOptions(
         aspectRatio: "16:9",
-        seconds: 6,
         negativePrompt: "No text overlays"
     )
 )
 ```
 
-Video model names and limits change by provider account, so keep them in configuration rather than hard-coding them deep in UI code.
+The current Gemini video encoder sends `aspectRatio`, `negativePrompt`, and `seed`. `seconds` is used by OpenAI-compatible video generation, but it is not sent to Gemini today. Video model names and limits change by provider account, so keep them in configuration rather than hard-coding them deep in UI code.
 
 ## Polling Controls
 
@@ -64,7 +63,7 @@ Video model names and limits change by provider account, so keep them in configu
 
 | Option | Use |
 | --- | --- |
-| `seconds` | Requested duration |
+| `seconds` | Requested duration for OpenAI-compatible video endpoints |
 | `size` / `aspectRatio` | Output shape for the target surface |
 | `negativePrompt` | Things the model should avoid |
 | `pollInterval` | Delay between provider status checks |

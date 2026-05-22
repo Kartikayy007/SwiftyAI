@@ -5,7 +5,7 @@
 | API | Output | Best for |
 | --- | --- | --- |
 | `generateWithTools` | Final `AIStepResult` | Background tasks, server actions, tests, single final answer |
-| `streamWithTools` | `AIAgentChunk` stream plus final result callback | Chat-style UIs that need text and tool progress |
+| `streamWithTools` | `AIAgentChunk` event stream plus final result callback | UIs that need step text and tool progress |
 | `createAgentUIStream` | Higher-level `AgentEvent` stream | Frontend state machines and timeline rendering |
 
 ## One Loop
@@ -59,7 +59,7 @@ let stopOnManyTools = AIStopCondition(name: "tooManyTools") { context in
 
 ## Stream A Tool Loop
 
-`streamWithTools` yields `AIAgentChunk` values for model text, tool calls, and tool results.
+`streamWithTools` yields `AIAgentChunk` values for model step text, tool calls, and tool results. It runs the same non-token tool loop as `generateWithTools`; when a step returns assistant text, that step's text is emitted as one chunk.
 
 ```swift
 let stream = streamWithTools(
@@ -86,7 +86,7 @@ for try await chunk in stream {
 }
 ```
 
-Use [agent UI stream](/docs/agent-ui-stream) when a UI wants higher-level events such as `stepStarted`, `toolCallStarted`, and `agentFinished`.
+Use [agent UI stream](/docs/agent-ui-stream) when a UI wants higher-level events such as `stepStarted`, `toolCallStarted`, and `agentFinished`. Use `streamText` for token-style assistant text streaming without tools.
 
 ## Tool Policies
 
