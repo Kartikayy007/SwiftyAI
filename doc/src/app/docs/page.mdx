@@ -38,7 +38,7 @@ That same model can usually be reused for streaming, object generation, tools, a
 | SwiftUI state | `AIChat`, `AICompletion`, `SwiftyChat` | Observable chat and completion state without prebuilt UI components |
 | Media | `generateImage`, `transcribe`, `generateSpeech`, `generateVideo` | Image, audio, transcription, speech, and video model calls |
 | Providers | Direct providers, `AI.configure`, `ProviderRegistry` | Swapping providers, local models, tests, private gateways |
-| Extensions | Middleware, telemetry, MCP, utilities | Request policy, response cleanup, observability, external tool servers |
+| Extensions | Middleware, MCP, utilities | Request policy, response cleanup, external tool servers |
 
 ## Choosing A Path
 
@@ -65,4 +65,4 @@ Call `AI.configure` during app startup before user-driven requests. For code tha
 
 ## Next Reads
 
-Start with [installation](/docs/installation), then [provider setup](/docs/provider-setup) and [quickstart](/docs/quickstart). After that, follow the path your app needs: [text](/docs/generate-text), [streaming](/docs/stream-text), [objects](/docs/generate-object), [tools](/docs/tool-calling), [SwiftUI hooks](/docs/swiftui-hooks), [middleware](/docs/middleware), [MCP](/docs/mcp), or [telemetry](/docs/telemetry).
+Start with [installation](/docs/installation), then [provider setup](/docs/provider-setup) and [quickstart](/docs/quickstart). After that, follow the path your app needs: [text](/docs/generate-text), [streaming](/docs/stream-text), [objects](/docs/generate-object), [tools](/docs/tool-calling), [SwiftUI hooks](/docs/swiftui-hooks), [middleware](/docs/middleware), or [MCP](/docs/mcp).

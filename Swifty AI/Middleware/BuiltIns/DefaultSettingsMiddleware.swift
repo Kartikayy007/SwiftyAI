@@ -142,13 +142,8 @@ extension GenerationOptions {
             headers[key] = value
         }
 
-        if let retryPolicy = settings.retryPolicy, isRetryPolicyUnset {
+        if let retryPolicy = settings.retryPolicy, !wasRetryPolicySet {
             self.retryPolicy = retryPolicy
         }
-    }
-
-    private var isRetryPolicyUnset: Bool {
-        retryPolicy.maxAttempts == RetryPolicy.none.maxAttempts
-            && retryPolicy.retryableStatusCodes == RetryPolicy.none.retryableStatusCodes
     }
 }

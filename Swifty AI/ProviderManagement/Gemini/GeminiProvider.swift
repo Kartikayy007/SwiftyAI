@@ -59,9 +59,12 @@ public struct GeminiProvider: AIModel, AIStreamModel, AIToolCallingModel, AIImag
     }
 
     public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        let systemText = messages.first(where: { $0.role == .system })?.content
-        let contents = messages
-            .filter { $0.role != .system }
+        stream(messages: messages, options: GenerationOptions())
+    }
+
+    public func stream(messages: [ChatMessage], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        let systemText = options.system ?? messages.first(where: { $0.role == .system })?.content
+        let contents = messages.filter { $0.role != .system }
         let mapped: [Request.Content]
         do {
             mapped = try contents.map { msg in
@@ -76,7 +79,7 @@ public struct GeminiProvider: AIModel, AIStreamModel, AIToolCallingModel, AIImag
         let systemInstruction = systemText.map {
             Request.SystemInstruction(parts: [.init(text: $0)])
         }
-        return streamSSE(contents: mapped, systemInstruction: systemInstruction, options: GenerationOptions())
+        return streamSSE(contents: mapped, systemInstruction: systemInstruction, options: options)
     }
 
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {

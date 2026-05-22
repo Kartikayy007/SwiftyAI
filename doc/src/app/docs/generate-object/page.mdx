@@ -48,6 +48,35 @@ print(result.usage?.totalTokens ?? 0)
 
 The return value is `ObjectResponse<T>`, with the decoded `object`, token `usage`, `finishReason`, and provider `model` when available.
 
+## `JSONSchemaConvertible` Shorthand
+
+When a type already exposes a raw JSON Schema dictionary (for example because it is generated or shared with another platform), it can conform to `JSONSchemaConvertible` and use the `as:` overload that skips the `Output<T>` builder.
+
+```swift
+struct Recipe: Decodable, JSONSchemaConvertible {
+    let title: String
+    let servings: Int
+
+    static let schemaName = "Recipe"
+    static let jsonSchema: [String: Any] = [
+        "type": "object",
+        "properties": [
+            "title": ["type": "string"],
+            "servings": ["type": "integer"]
+        ],
+        "required": ["title", "servings"]
+    ]
+}
+
+let result = try await generateObject(
+    model: model,
+    prompt: "Turn tomato soup into a simple recipe.",
+    as: Recipe.self
+)
+```
+
+Use this when the schema lives next to the type as raw JSON. Use `AISchemaConvertible` and `Output<T>` when the schema is built with the typed `AISchema` builders.
+
 ## Manual Output Schema
 
 You can also pass a schema directly. This is useful for dictionaries, arrays, or types you do not own.

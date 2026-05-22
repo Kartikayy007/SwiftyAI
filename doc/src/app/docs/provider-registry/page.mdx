@@ -75,6 +75,36 @@ let result = try await generateWithTools(
 )
 ```
 
+Media APIs accept the same `registry:` form:
+
+```swift
+let image = try await generateImage(
+    model: "demo/image",
+    registry: registry,
+    prompt: "A clean SwiftyAI app icon."
+)
+
+let transcript = try await transcribe(
+    model: "demo/transcribe",
+    registry: registry,
+    audio: audio
+)
+
+let speech = try await generateSpeech(
+    model: "demo/speech",
+    registry: registry,
+    text: "Your export is ready."
+)
+
+let video = try await generateVideo(
+    model: "demo/video",
+    registry: registry,
+    prompt: "A short product walkthrough."
+)
+```
+
+`streamWithTools(model:registry:…)` is also available with the same signature.
+
 ## Resolve Manually
 
 Manual resolution is useful when you need to pass a model into another object.

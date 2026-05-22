@@ -37,6 +37,8 @@ let response = try await generateText(
 
 Middleware composes in order. The first middleware sees the request first, the provider runs last, and the response comes back through the same chain.
 
+`defaultSettingsMiddleware` only overrides a per-request value when the request did not set it. The retry policy override fires whenever the request's `retryPolicy` still looks like `RetryPolicy.none` (one attempt with the default retryable status codes). If you want to keep a request at "no retries" while a middleware sets a more aggressive policy, change the retryable status codes too — for example `RetryPolicy(maxAttempts: 1, retryableStatusCodes: [])` will not be treated as the default and will not be overridden.
+
 ## Streaming Middleware
 
 Streaming middleware wraps models that conform to `AIStreamModel`. It can set defaults for streaming requests or simulate a stream from a non-streaming model.
@@ -72,6 +74,16 @@ let suffixPrompt = LanguageModelMiddleware { request, next in
 }
 
 let wrapped = wrapLanguageModel(model, middleware: [suffixPrompt])
+```
+
+`request.promptText` is a convenience over `request.prompt: [AIMessageContent]`. Setting it (including `+=`) replaces the entire prompt with a single `.text` part, which drops any image, PDF, audio, video, or file parts. For multimodal prompts, mutate `request.prompt` directly:
+
+```swift
+let suffixPrompt = LanguageModelMiddleware { request, next in
+    var request = request
+    request.prompt.append(.text("\n\nWrite for an iOS engineering audience."))
+    return try await next(request)
+}
 ```
 
 | Pattern | Better as middleware when |

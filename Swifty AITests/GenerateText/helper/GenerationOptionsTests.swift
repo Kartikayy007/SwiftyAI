@@ -360,4 +360,47 @@ final class GenerationOptionsTests: XCTestCase {
         XCTAssertTrue(chunkFired)
         XCTAssertTrue(finishFired)
     }
+
+    func testRetryPolicyExponentialBackoffSequence() {
+        let policy = RetryPolicy(
+            maxAttempts: 5,
+            baseDelay: .milliseconds(250),
+            maxDelay: .seconds(30),
+            jitter: 0
+        )
+        XCTAssertEqual(policy.delay(forAttempt: 1), .milliseconds(250))
+        XCTAssertEqual(policy.delay(forAttempt: 2), .milliseconds(500))
+        XCTAssertEqual(policy.delay(forAttempt: 3), .milliseconds(1000))
+        XCTAssertEqual(policy.delay(forAttempt: 4), .milliseconds(2000))
+    }
+
+    func testRetryPolicyCappedByMaxDelay() {
+        let policy = RetryPolicy(
+            maxAttempts: 10,
+            baseDelay: .milliseconds(250),
+            maxDelay: .milliseconds(750),
+            jitter: 0
+        )
+        XCTAssertEqual(policy.delay(forAttempt: 1), .milliseconds(250))
+        XCTAssertEqual(policy.delay(forAttempt: 2), .milliseconds(500))
+        // 1000ms exceeds 750ms cap
+        XCTAssertEqual(policy.delay(forAttempt: 3), .milliseconds(750))
+        XCTAssertEqual(policy.delay(forAttempt: 7), .milliseconds(750))
+    }
+
+    func testRetryPolicyJitterWithinBounds() {
+        let policy = RetryPolicy(
+            maxAttempts: 3,
+            baseDelay: .milliseconds(100),
+            maxDelay: .seconds(30),
+            jitter: 0.5
+        )
+        // attempt 1: nominal 100ms, jitter ±50% → range [50ms, 150ms]
+        for _ in 0..<20 {
+            let d = policy.delay(forAttempt: 1)
+            let nanos = d.components.seconds * 1_000_000_000 + d.components.attoseconds / 1_000_000_000
+            XCTAssertGreaterThanOrEqual(nanos, 50_000_000)
+            XCTAssertLessThanOrEqual(nanos, 150_000_000)
+        }
+    }
 }

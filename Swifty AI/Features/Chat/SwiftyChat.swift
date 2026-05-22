@@ -29,7 +29,9 @@ public final class SwiftyChat {
 
     private func resolveModel() async throws -> any AIStreamModel {
         if let m = _model { return m }
-        guard let s = modelString else { fatalError("SwiftyChat: no model set") }
+        guard let s = modelString else {
+            throw AIError.unsupportedFeature("SwiftyChat: no model configured")
+        }
         let m = try await AIRegistry.shared.resolve(s)
         _model = m
         return m

@@ -1,28 +1,43 @@
 # Providers
 
-SwiftyAI includes concrete providers plus an OpenAI-compatible adapter. The SDK API stays the same; the provider decides how requests are encoded.
+SwiftyAI ships ten providers. The SDK API stays the same across all of them — the provider decides how requests are encoded and which features are available.
 
-| Provider family | Typical use |
-| --- | --- |
-| `OpenAICompatibleProvider` | OpenAI, Groq, OpenRouter, Mistral, Cohere, Cloudflare, Ollama, and private gateways |
-| `AnthropicProvider` | Claude text, streaming, and tool-capable workflows |
-| `GeminiProvider` | Gemini text, streaming, tool-capable workflows, and Gemini media |
-| `AppleFoundationProvider` | On-device Apple Intelligence when available |
-| `ProviderRegistry` | App-local or test-local custom model strings |
+| Provider | Prefix | Base URL |
+| --- | --- | --- |
+| OpenAI | `openai` | `https://api.openai.com/v1` |
+| Anthropic | `anthropic` | `https://api.anthropic.com/v1` |
+| Gemini | `gemini` | `https://generativelanguage.googleapis.com/v1beta` |
+| Groq | `groq` | `https://api.groq.com/openai/v1` |
+| Mistral | `mistral` | `https://api.mistral.ai/v1` |
+| Cohere | `cohere` | `https://api.cohere.com/compatibility/v1` |
+| OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` |
+| Cloudflare | `cloudflare` | `https://api.cloudflare.com/…/accounts/{id}/ai/v1` |
+| Ollama | `ollama` | `http://localhost:11434/v1` (default) |
+| Apple Foundation | — | On-device, no network |
+
+## Capability Matrix
+
+**Yes** = supported by this provider's endpoint. **—** = not supported (or endpoint does not expose it). All OpenAI-compatible providers share one Swift type — the **—** marks reflect what each endpoint actually supports, not the Swift type's protocol conformances.
+
+| | Text | Stream | Tools | Image | Transcription | Speech | Video | Embeddings | Reranking |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **OpenAI** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | — |
+| **Anthropic** | Yes | Yes | Yes | — | — | — | — | — | — |
+| **Gemini** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | — |
+| **Groq** | Yes | Yes | Yes | — | — | — | — | — | — |
+| **Mistral** | Yes | Yes | Yes | Yes¹ | — | — | — | Yes | — |
+| **Cohere** | Yes | Yes | Yes | — | — | — | — | Yes | Yes² |
+| **OpenRouter** | Yes | Yes | Yes | — | — | — | — | — | — |
+| **Cloudflare** | Yes | Yes | Yes | — | — | — | — | — | — |
+| **Ollama** | Yes | Yes | Yes | — | — | — | — | Yes | — |
+| **Apple Foundation** | Yes | Yes | Yes | — | — | — | — | — | — |
+
+¹ Mistral image generation depends on your plan and the specific model — not available on all tiers.  
+² Cohere reranking requires `CohereRerankProvider`, a separate type from the chat provider.
 
 ## Built-In Prefixes
 
-`AI.configure` supports these model string prefixes:
-
-- `openai`
-- `anthropic`
-- `gemini`
-- `groq`
-- `openrouter`
-- `mistral`
-- `cohere`
-- `cloudflare`
-- `ollama`
+Register providers with `AI.configure` and reference them by string:
 
 ```swift
 AI.configure { ai in
@@ -30,18 +45,173 @@ AI.configure { ai in
     ai.anthropic(apiKey: anthropicKey)
     ai.gemini(apiKey: geminiKey)
     ai.groq(apiKey: groqKey)
+    ai.mistral(apiKey: mistralKey)
+    ai.cohere(apiKey: cohereKey)
+    ai.openRouter(apiKey: openRouterKey)
     ai.ollama(baseURL: "http://localhost:11434/v1")
 }
 
 let response = try await generateText(
-    model: "anthropic/claude-3-5-sonnet-latest",
+    model: "groq/llama-3.3-70b-versatile",
     prompt: "Write a concise migration note."
 )
 ```
 
+## Provider Quick Reference
+
+### OpenAI
+
+```swift
+// Via AI.configure
+ai.openAI(apiKey: openAIKey)
+// model string: "openai/gpt-4o"
+
+// Direct
+let provider = OpenAICompatibleProvider(
+    baseURL: "https://api.openai.com/v1",
+    apiKey: openAIKey,
+    model: "gpt-4o"
+)
+```
+
+### Anthropic
+
+```swift
+// Via AI.configure
+ai.anthropic(apiKey: anthropicKey)
+// model string: "anthropic/claude-opus-4-5"
+
+// Direct
+let provider = AnthropicProvider(
+    apiKey: anthropicKey,
+    model: "claude-opus-4-5"
+)
+```
+
+### Gemini
+
+```swift
+// Via AI.configure
+ai.gemini(apiKey: geminiKey)
+// model string: "gemini/gemini-2.0-flash"
+
+// Direct
+let provider = GeminiProvider(
+    apiKey: geminiKey,
+    model: "gemini-2.0-flash"
+)
+```
+
+### Groq
+
+```swift
+// Via AI.configure
+ai.groq(apiKey: groqKey)
+// model string: "groq/llama-3.3-70b-versatile"
+
+// Direct
+let provider = OpenAICompatibleProvider(
+    baseURL: "https://api.groq.com/openai/v1",
+    apiKey: groqKey,
+    model: "llama-3.3-70b-versatile"
+)
+```
+
+### Mistral
+
+```swift
+// Via AI.configure
+ai.mistral(apiKey: mistralKey)
+// model string: "mistral/mistral-large-latest"
+
+// Direct
+let provider = OpenAICompatibleProvider(
+    baseURL: "https://api.mistral.ai/v1",
+    apiKey: mistralKey,
+    model: "mistral-large-latest"
+)
+```
+
+### Cohere
+
+```swift
+// Via AI.configure
+ai.cohere(apiKey: cohereKey)
+// model string: "cohere/command-r-plus"
+
+// Chat / generation
+let provider = OpenAICompatibleProvider(
+    baseURL: "https://api.cohere.com/compatibility/v1",
+    apiKey: cohereKey,
+    model: "command-r-plus"
+)
+
+// Reranking (separate provider)
+let reranker = CohereRerankProvider(
+    apiKey: cohereKey,
+    model: "rerank-v3.5"
+)
+```
+
+### OpenRouter
+
+```swift
+// Via AI.configure
+ai.openRouter(apiKey: openRouterKey)
+// model string: "openrouter/meta-llama/llama-3.3-70b-instruct"
+
+// Direct
+let provider = OpenAICompatibleProvider(
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: openRouterKey,
+    model: "meta-llama/llama-3.3-70b-instruct"
+)
+```
+
+### Cloudflare Workers AI
+
+```swift
+// Via AI.configure
+ai.cloudflare(accountID: accountID, apiKey: cfKey)
+// model string: "cloudflare/@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+
+// Direct
+let provider = OpenAICompatibleProvider(
+    baseURL: "https://api.cloudflare.com/client/v4/accounts/\(accountID)/ai/v1",
+    apiKey: cfKey,
+    model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+)
+```
+
+### Ollama (Local)
+
+```swift
+// Via AI.configure
+ai.ollama(baseURL: "http://localhost:11434/v1")
+// model string: "ollama/llama3.2"
+
+// Direct
+let provider = OpenAICompatibleProvider(
+    baseURL: "http://localhost:11434/v1",
+    apiKey: "ollama",
+    model: "llama3.2"
+)
+```
+
+### Apple Foundation (On-Device)
+
+```swift
+// Direct only — no AI.configure prefix
+// Requires iOS 26+ / macOS 26+, FoundationModels framework
+if AppleFoundationProvider.isAvailable {
+    let provider = AppleFoundationProvider()
+    let response = try await provider.generate("Hello")
+}
+```
+
 ## Direct Provider Types
 
-Use direct providers when you want explicit construction.
+Use direct providers when you want explicit construction without the registry.
 
 ```swift
 let openAI = OpenAICompatibleProvider(
@@ -61,37 +231,20 @@ let gemini = GeminiProvider(
 )
 ```
 
-`AppleFoundationProvider` is available when the target can import `FoundationModels`.
+## Media APIs and Model String Routing
 
-## OpenAI-Compatible Providers
-
-`OpenAICompatibleProvider` powers OpenAI plus compatible APIs such as Groq, OpenRouter, Mistral, Cohere, Cloudflare, Ollama, and private gateways.
+When you call media APIs (`generateImage`, `transcribe`, `generateSpeech`, `generateVideo`) using **`AI.configure` model strings**, only the `openai/` and `gemini/` prefixes route through the shared registry's media resolver. Other configured providers throw `AIError.unsupportedFeature` from the model-string overloads even if the underlying endpoint would work. For those providers, construct an `OpenAICompatibleProvider` directly and pass the instance into the function-form API:
 
 ```swift
-let local = OpenAICompatibleProvider(
-    baseURL: "http://localhost:11434/v1",
-    apiKey: "ollama",
-    model: "llama3.2"
+let mistral = OpenAICompatibleProvider(
+    baseURL: "https://api.mistral.ai/v1",
+    apiKey: mistralKey,
+    model: "pixtral-large-latest"
 )
+let image = try await generateImage(model: mistral, prompt: "A snowy mountain")
 ```
 
-This adapter supports text, streaming, tools, and the media protocols when the underlying endpoint supports them.
-
-## Capability Guide
-
-| Capability | Required protocol |
-| --- | --- |
-| Full text response | `AIModel` |
-| Streaming text | `AIStreamModel` |
-| Tool calling | `AIToolCallingModel` |
-| Image generation | `AIImageModel` |
-| Transcription | `AITranscriptionModel` |
-| Speech generation | `AISpeechModel` |
-| Video generation | `AIVideoModel` |
-
-Text and streaming are the safest cross-provider assumptions. Tool calling and media calls require the matching protocol.
-
-When a provider cannot support a call, SwiftyAI throws instead of silently pretending the feature exists.
+Or register the model via `ProviderRegistry`'s `imageModels` / `transcriptionModels` / `speechModels` / `videoModels` maps.
 
 <Related>
 Read [provider setup](/docs/provider-setup), [local models](/docs/local-models), and [custom providers](/docs/custom-providers).

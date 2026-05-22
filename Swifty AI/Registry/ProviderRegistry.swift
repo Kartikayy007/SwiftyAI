@@ -136,7 +136,7 @@ public struct ProviderRegistry: Sendable {
         guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else {
             throw AIError.invalidModelString(modelString)
         }
-        return ModelID(provider: String(parts[0]), model: String(parts[1]))
+        return ModelID(provider: String(parts[0]).lowercased(), model: String(parts[1]))
     }
 }
 

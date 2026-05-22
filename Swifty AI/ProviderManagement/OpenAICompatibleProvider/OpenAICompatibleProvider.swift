@@ -75,7 +75,16 @@ public struct OpenAICompatibleProvider: AIModel, AIStreamModel, AIToolCallingMod
     }
 
     public func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
-        streamSSE(messages: messages.map { .init(role: $0.role.rawValue, parts: $0.parts) }, options: GenerationOptions())
+        stream(messages: messages, options: GenerationOptions())
+    }
+
+    public func stream(messages: [ChatMessage], options: GenerationOptions) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        var converted = messages.map { Request.Message(role: $0.role.rawValue, parts: $0.parts) }
+        // If options.system is set and no system message is present, prepend it.
+        if let system = options.system, !converted.contains(where: { $0.role == "system" }) {
+            converted.insert(.init(role: "system", content: system), at: 0)
+        }
+        return streamSSE(messages: converted, options: options)
     }
 
     public func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {

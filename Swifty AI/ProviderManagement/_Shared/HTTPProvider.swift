@@ -40,7 +40,7 @@ func httpPost(
             throw error
         }
 
-        try await Task.sleep(for: options.retryPolicy.baseDelay)
+        try await Task.sleep(for: options.retryPolicy.delay(forAttempt: attempt))
     }
 
     throw lastError ?? AIError.invalidResponse
@@ -81,7 +81,7 @@ func httpPostData(
             throw error
         }
 
-        try await Task.sleep(for: options.retryPolicy.baseDelay)
+        try await Task.sleep(for: options.retryPolicy.delay(forAttempt: attempt))
     }
 
     throw lastError ?? AIError.invalidResponse
@@ -176,7 +176,7 @@ private func sendHTTPPost(
     return data
 }
 
-private func shouldRetry(_ error: AIError, policy: RetryPolicy) -> Bool {
+func shouldRetry(_ error: AIError, policy: RetryPolicy) -> Bool {
     switch error {
     case .apiError(let statusCode, _):
         return policy.retryableStatusCodes.contains(statusCode)
@@ -187,7 +187,7 @@ private func shouldRetry(_ error: AIError, policy: RetryPolicy) -> Bool {
     }
 }
 
-private func apiErrorMessage(from data: Data) -> String? {
+func apiErrorMessage(from data: Data) -> String? {
     guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
         return String(data: data, encoding: .utf8)
     }

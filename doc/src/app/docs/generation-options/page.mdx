@@ -84,12 +84,13 @@ let options = GenerationOptions(
     system: "Use the product manual as reference.",
     promptCaching: PromptCachingOptions(
         cacheKey: "manual-v4",
-        retention: "ephemeral"
+        retention: "ephemeral",
+        cachedContent: largePromptPrefix
     )
 )
 ```
 
-SwiftyAI passes the intent through the provider layer. The provider decides whether the cache key, retention, or cached content fields map to its API.
+`PromptCachingOptions` fields are `cacheKey`, `retention`, and `cachedContent` (all optional `String`). SwiftyAI passes the intent through the provider layer. The provider decides whether the cache key, retention, or cached content fields map to its API.
 
 ## Defaults With Middleware
 
