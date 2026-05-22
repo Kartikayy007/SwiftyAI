@@ -104,22 +104,10 @@ public enum ToolErrorPolicy: Sendable, Equatable {
     case failFast
 }
 
-public enum ToolTelemetryEvent: Sendable {
-    case requested(AIToolCall)
-    case approved(AIToolCall)
-    case rejected(AIToolCall, reason: String)
-    case started(AIToolCall)
-    case succeeded(AIToolCall, AIToolResult)
-    case failed(AIToolCall, message: String)
-    case skipped(AIToolCall, reason: String)
-    case completed(stepIndex: Int)
-}
-
 public struct ToolExecutionOptions {
     public var approval: ((AIToolCall) -> ToolCallDecision)?
     public var onToolCall: ((AIToolCall) -> ToolCallDecision)?
     public var onToolResult: ((AIToolResult) -> Void)?
-    public var onTelemetry: ((ToolTelemetryEvent) -> Void)?
     public var parallelToolCalls: Bool
     public var errorPolicy: ToolErrorPolicy
 
@@ -127,14 +115,12 @@ public struct ToolExecutionOptions {
         approval: ((AIToolCall) -> ToolCallDecision)? = nil,
         onToolCall: ((AIToolCall) -> ToolCallDecision)? = nil,
         onToolResult: ((AIToolResult) -> Void)? = nil,
-        onTelemetry: ((ToolTelemetryEvent) -> Void)? = nil,
         parallelToolCalls: Bool = false,
         errorPolicy: ToolErrorPolicy = .returnErrorResult
     ) {
         self.approval = approval
         self.onToolCall = onToolCall
         self.onToolResult = onToolResult
-        self.onTelemetry = onTelemetry
         self.parallelToolCalls = parallelToolCalls
         self.errorPolicy = errorPolicy
     }

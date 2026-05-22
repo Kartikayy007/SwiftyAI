@@ -30,25 +30,25 @@ let response = try await generateText(
 
 Direct construction is the clearest option for examples, previews, and tests because there is no shared registry state.
 
-### Static Factories
-
-Each built-in provider also has a static factory on `AIModel` and `AIStreamModel`, which is shorter than spelling out `OpenAICompatibleProvider(baseURL:apiKey:model:)`.
+For common built-in providers, `AIModel` also has static factory helpers:
 
 ```swift
-let openAI: any AIStreamModel = .openAI(apiKey: openAIKey, model: "gpt-4o-mini")
-let anthropic: any AIStreamModel = .anthropic(apiKey: anthropicKey, model: "claude-3-5-sonnet-latest")
-let gemini: any AIStreamModel = .gemini(apiKey: geminiKey, model: "gemini-2.0-flash")
-let groq: any AIStreamModel = .groq(apiKey: groqKey, model: "llama-3.1-8b-instant")
-let openRouter: any AIStreamModel = .openRouter(apiKey: routerKey, model: "openrouter/auto")
-let mistral: any AIStreamModel = .mistral(apiKey: mistralKey, model: "mistral-large-latest")
-let cohere: any AIStreamModel = .cohere(apiKey: cohereKey, model: "command-r-plus")
-let cloudflare: any AIStreamModel = .cloudflare(accountID: accountID, apiKey: cfKey, model: "@cf/meta/llama-3.1-8b-instruct")
-let ollama: any AIStreamModel = .ollama(model: "llama3.2")
+let openAI: OpenAICompatibleProvider = .openAI(
+    apiKey: openAIKey,
+    model: "gpt-4o-mini"
+)
+
+let gemini: GeminiProvider = .gemini(
+    apiKey: geminiKey,
+    model: "gemini-2.0-flash"
+)
+
+let local: OpenAICompatibleProvider = .ollama(
+    model: "llama3.2"
+)
 ```
 
-The factories return concrete provider types, so you can also assign to `any AIModel` or to the concrete provider type. The `ollama` factory uses `http://localhost:11434/v1` and the literal API key `"ollama"` by default; pass `baseURL:` to override.
-
-On iOS 26 / macOS 26 and newer, when the target can `import FoundationModels`, `AppleFoundationProvider` exposes `.appleFoundation()` as the same kind of factory. Check `AppleFoundationProvider.isAvailable` at runtime before using it.
+Available helpers are `.openAI`, `.groq`, `.openRouter`, `.mistral`, `.cohere`, `.cloudflare`, `.ollama`, `.anthropic`, `.gemini`, and `.appleFoundation()` when `FoundationModels` can be imported.
 
 ## Built-In Model Strings
 

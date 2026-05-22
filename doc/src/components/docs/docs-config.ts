@@ -50,6 +50,7 @@ export const docsNavGroups = [
       { title: "SwiftUI Hooks", href: "/docs/swiftui-hooks" },
       { title: "AIChat", href: "/docs/ai-chat" },
       { title: "AICompletion", href: "/docs/ai-completion" },
+      { title: "SwiftyChat", href: "/docs/swifty-chat" },
     ],
   },
   {
