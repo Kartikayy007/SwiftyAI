@@ -152,6 +152,117 @@ final class GenerateWithToolsTests: XCTestCase {
         XCTAssertEqual(result.steps.first?.toolResults.first?.isError, true)
     }
 
+    func testToolCallInterceptionCanReturnSyntheticResult() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [.init(id: "call_1", name: "cache", arguments: "{}")], finishReason: "tool_calls"),
+            .init(text: "done", toolCalls: [], finishReason: "stop")
+        ])
+        let cache = AITool(name: "cache", description: "", parameters: [:]) { _ in
+            XCTFail("Synthetic result should skip tool execution")
+            return ""
+        }
+
+        let result = try await generateWithTools(
+            model: model,
+            prompt: "cache",
+            tools: [cache],
+            toolOptions: .init(onToolCall: { _ in .returnResult("cached") })
+        )
+
+        XCTAssertEqual(result.steps.first?.toolResults.first?.content, "cached")
+        XCTAssertEqual(result.steps.first?.toolResults.first?.isError, false)
+    }
+
+    func testApprovalCanReturnSyntheticResult() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [.init(id: "call_1", name: "lookup", arguments: "{}")], finishReason: "tool_calls"),
+            .init(text: "done", toolCalls: [], finishReason: "stop")
+        ])
+        let lookup = AITool(name: "lookup", description: "", parameters: [:]) { _ in
+            XCTFail("Approval synthetic result should skip tool execution")
+            return ""
+        }
+
+        let result = try await generateWithTools(
+            model: model,
+            prompt: "lookup",
+            tools: [lookup],
+            toolOptions: .init(approval: { _ in .returnResult("approved-cache") })
+        )
+
+        XCTAssertEqual(result.steps.first?.toolResults.first?.content, "approved-cache")
+    }
+
+    func testMissingToolReturnsErrorResultByDefault() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [.init(id: "call_1", name: "missing", arguments: "{}")], finishReason: "tool_calls"),
+            .init(text: "done", toolCalls: [], finishReason: "stop")
+        ])
+
+        let result = try await generateWithTools(model: model, prompt: "missing", tools: [])
+
+        XCTAssertEqual(result.steps.first?.toolResults.first?.name, "missing")
+        XCTAssertEqual(result.steps.first?.toolResults.first?.isError, true)
+        XCTAssertTrue(result.steps.first?.toolResults.first?.content.contains("missing") == true)
+    }
+
+    func testThrownToolErrorReturnsErrorResultByDefault() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [.init(id: "call_1", name: "fail", arguments: "{}")], finishReason: "tool_calls"),
+            .init(text: "done", toolCalls: [], finishReason: "stop")
+        ])
+        let fail = AITool(name: "fail", description: "", parameters: [:]) { _ in
+            throw ToolTestError.failed
+        }
+
+        let result = try await generateWithTools(model: model, prompt: "fail", tools: [fail])
+
+        XCTAssertEqual(result.steps.first?.toolResults.first?.isError, true)
+        XCTAssertFalse(result.isMaxStepsExceeded)
+    }
+
+    func testFailFastToolErrorThrows() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [.init(id: "call_1", name: "fail", arguments: "{}")], finishReason: "tool_calls")
+        ])
+        let fail = AITool(name: "fail", description: "", parameters: [:]) { _ in
+            throw ToolTestError.failed
+        }
+
+        do {
+            _ = try await generateWithTools(
+                model: model,
+                prompt: "fail",
+                tools: [fail],
+                toolOptions: .init(errorPolicy: .failFast)
+            )
+            XCTFail("Expected failFast to throw")
+        } catch let error as ToolTestError {
+            XCTAssertEqual(error, .failed)
+        }
+    }
+
+    func testOnToolResultReceivesExecutedResult() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "", toolCalls: [.init(id: "call_1", name: "echo", arguments: #"{"value":"ok"}"#)], finishReason: "tool_calls"),
+            .init(text: "done", toolCalls: [], finishReason: "stop")
+        ])
+        let echo = AITool(name: "echo", description: "", parameters: [:]) { args in
+            args["value"] as? String ?? ""
+        }
+        var observed: [AIToolResult] = []
+
+        _ = try await generateWithTools(
+            model: model,
+            prompt: "echo",
+            tools: [echo],
+            toolOptions: .init(onToolResult: { observed.append($0) })
+        )
+
+        XCTAssertEqual(observed.map(\.content), ["ok"])
+        XCTAssertEqual(observed.first?.toolCallID, "call_1")
+    }
+
     func testParallelToolCallsRunConcurrentlyAndPreserveOrder() async throws {
         actor ConcurrencyProbe {
             var active = 0
@@ -192,6 +303,84 @@ final class GenerateWithToolsTests: XCTestCase {
         XCTAssertEqual(result.steps.first?.toolResults.map(\.content), ["first", "second"])
         let maxActive = await probe.maxActive
         XCTAssertEqual(maxActive, 2)
+    }
+
+    func testStreamWithToolsYieldsTextToolCallAndToolResultChunks() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(
+                text: "Checking",
+                toolCalls: [.init(id: "call_1", name: "weather", arguments: #"{"city":"Delhi"}"#)],
+                usage: TokenUsage(inputTokens: 3, outputTokens: 1),
+                finishReason: "tool_calls"
+            ),
+            .init(text: "Done", toolCalls: [], finishReason: "stop")
+        ])
+        let weather = AITool(name: "weather", description: "", parameters: [:]) { args in
+            "Weather for \(args["city"] as? String ?? "")"
+        }
+
+        var chunks: [AIAgentChunk] = []
+        for try await chunk in streamWithTools(model: model, prompt: "weather?", tools: [weather]) {
+            chunks.append(chunk)
+        }
+
+        XCTAssertEqual(chunks.compactMap { $0.text.isEmpty ? nil : $0.text }, ["Checking", "Done"])
+        XCTAssertEqual(chunks.compactMap(\.toolCall).map(\.name), ["weather"])
+        XCTAssertEqual(chunks.compactMap(\.toolResult).map(\.content), ["Weather for Delhi"])
+        XCTAssertEqual(chunks.first?.usage?.inputTokens, 3)
+    }
+
+    func testStreamWithToolsCallbacksFire() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "done", toolCalls: [], usage: TokenUsage(inputTokens: 1, outputTokens: 1), finishReason: "stop")
+        ])
+        var onChunkTexts: [String] = []
+        var finishedSteps: [AIStep] = []
+        var finishedResult: AIStepResult?
+
+        for try await _ in streamWithTools(
+            model: model,
+            prompt: "hello",
+            tools: [],
+            onChunk: { if !$0.text.isEmpty { onChunkTexts.append($0.text) } },
+            onStepFinish: { finishedSteps.append($0) },
+            onFinish: { finishedResult = $0 }
+        ) {}
+
+        XCTAssertEqual(onChunkTexts, ["done"])
+        XCTAssertEqual(finishedSteps.map(\.text), ["done"])
+        XCTAssertEqual(finishedResult?.text, "done")
+        XCTAssertEqual(finishedResult?.usage?.outputTokens, 1)
+    }
+
+    func testStreamWithToolsPropagatesModelError() async {
+        let model = FailingToolCallingModel(error: ToolTestError.failed)
+        var thrown: Error?
+
+        do {
+            for try await _ in streamWithTools(model: model, prompt: "fail", tools: []) {}
+            XCTFail("Expected streamWithTools to throw")
+        } catch {
+            thrown = error
+        }
+
+        XCTAssertEqual(thrown as? ToolTestError, .failed)
+    }
+
+    func testStreamWithToolsResolvesCustomRegistryModelString() async throws {
+        let model = MockToolCallingModel(responses: [
+            .init(text: "registry", toolCalls: [], finishReason: "stop")
+        ])
+        let registry = createProviderRegistry([
+            "mock": customProvider(toolCallingModels: ["tool": model])
+        ])
+
+        var text = ""
+        for try await chunk in streamWithTools(model: "mock/tool", registry: registry, prompt: "hello", tools: []) {
+            text += chunk.text
+        }
+
+        XCTAssertEqual(text, "registry")
     }
 }
 
@@ -236,4 +425,28 @@ private struct PromptFallbackModel: AIToolCallingModel {
     func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
         AsyncThrowingStream { $0.finish() }
     }
+}
+
+private struct FailingToolCallingModel: AIToolCallingModel {
+    let error: Error
+
+    func generate(_ prompt: String) async throws -> AIResponse {
+        AIResponse(text: "", model: nil, usage: nil, finishReason: nil)
+    }
+
+    func stream(_ prompt: String) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+
+    func stream(messages: [ChatMessage]) -> AsyncThrowingStream<AIStreamChunk, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+
+    func generateStep(messages: [AIAgentMessage], tools: [AITool], options: GenerationOptions) async throws -> AIToolStepResponse {
+        throw error
+    }
+}
+
+private enum ToolTestError: Error, Equatable {
+    case failed
 }

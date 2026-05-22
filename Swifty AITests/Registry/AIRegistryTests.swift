@@ -32,6 +32,41 @@ final class AIRegistryTests: XCTestCase {
         XCTAssertTrue(model is OpenAICompatibleProvider)
     }
 
+    func testResolveEveryOpenAIAndGeminiMediaModelType() async throws {
+        await registry.set(.apiKey("sk-test"), for: "openai")
+        await registry.set(.apiKey("gemini-test"), for: "gemini")
+
+        XCTAssertTrue(try await registry.resolveImageModel("openai/gpt-image-1") is OpenAICompatibleProvider)
+        XCTAssertTrue(try await registry.resolveTranscriptionModel("openai/gpt-4o-transcribe") is OpenAICompatibleProvider)
+        XCTAssertTrue(try await registry.resolveSpeechModel("openai/gpt-4o-mini-tts") is OpenAICompatibleProvider)
+        XCTAssertTrue(try await registry.resolveVideoModel("openai/sora-2") is OpenAICompatibleProvider)
+
+        XCTAssertTrue(try await registry.resolveImageModel("gemini/imagen-4.0-generate-001") is GeminiProvider)
+        XCTAssertTrue(try await registry.resolveTranscriptionModel("gemini/gemini-2.5-flash") is GeminiProvider)
+        XCTAssertTrue(try await registry.resolveSpeechModel("gemini/gemini-2.5-flash-preview-tts") is GeminiProvider)
+        XCTAssertTrue(try await registry.resolveVideoModel("gemini/veo-3.1-generate-preview") is GeminiProvider)
+    }
+
+    func testResolveMediaForUnsupportedGlobalProviderThrows() async throws {
+        await registry.set(.apiKey("anthropic-test"), for: "anthropic")
+
+        do {
+            _ = try await registry.resolveImageModel("anthropic/claude-haiku-4-5-20251001")
+            XCTFail("Expected unsupported media provider")
+        } catch AIError.unsupportedFeature(let message) {
+            XCTAssertTrue(message.contains("anthropic"))
+        }
+    }
+
+    func testResolveMediaForUnconfiguredProviderThrows() async throws {
+        do {
+            _ = try await registry.resolveSpeechModel("openai/gpt-4o-mini-tts")
+            XCTFail("Expected providerNotConfigured")
+        } catch AIError.providerNotConfigured(let provider) {
+            XCTAssertEqual(provider, "openai")
+        }
+    }
+
     func testResolveUnconfiguredProviderThrows() async throws {
         do {
             _ = try await registry.resolve("openai/gpt-4o")

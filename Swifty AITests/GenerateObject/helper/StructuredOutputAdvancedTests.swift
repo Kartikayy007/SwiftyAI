@@ -23,6 +23,11 @@ final class StructuredOutputAdvancedTests: XCTestCase {
         case high
     }
 
+    private struct GuidedTicket: Codable, Equatable {
+        @Guide("Short customer-visible title", minLength: 3, maxLength: 80)
+        var title: String
+    }
+
     func testOutputObjectDecodesAndValidates() async throws {
         let mock = MockAIModel.success(#"{"name":"Ritik","age":25}"#)
         let result = try await generateObject(model: mock, prompt: "person", output: .object(Person.self))
@@ -56,6 +61,73 @@ final class StructuredOutputAdvancedTests: XCTestCase {
             XCTAssertTrue(issues.contains { $0.path == "$.name" })
             XCTAssertTrue(issues.contains { $0.path == "$.age" })
         }
+    }
+
+    func testSchemaValidationRejectsWrongPrimitiveType() async throws {
+        let mock = MockAIModel.success(#"{"name":"Ritik","age":"old"}"#)
+
+        do {
+            _ = try await generateObject(model: mock, prompt: "person", output: .object(Person.self))
+            XCTFail("Expected schema validation error")
+        } catch AIError.schemaValidationFailed(let issues) {
+            XCTAssertTrue(issues.contains { $0.path == "$.age" && $0.message.contains("integer") })
+        }
+    }
+
+    func testSchemaValidationRejectsMissingRequiredField() async throws {
+        let mock = MockAIModel.success(#"{"name":"Ritik"}"#)
+
+        do {
+            _ = try await generateObject(model: mock, prompt: "person", output: .object(Person.self))
+            XCTFail("Expected schema validation error")
+        } catch AIError.schemaValidationFailed(let issues) {
+            XCTAssertTrue(issues.contains { $0.path == "$.age" && $0.message.contains("Missing required") })
+        }
+    }
+
+    func testArraySchemaValidationRejectsInvalidItem() async throws {
+        let mock = MockAIModel.success(#"[{"name":"A","age":1},{"name":"B","age":-1}]"#)
+
+        do {
+            _ = try await generateObject(model: mock, prompt: "people", output: Output<[Person]>.array(Person.self))
+            XCTFail("Expected schema validation error")
+        } catch AIError.schemaValidationFailed(let issues) {
+            XCTAssertTrue(issues.contains { $0.path == "$[1].age" })
+        }
+    }
+
+    func testEnumOutputRejectsUnknownValue() async throws {
+        let mock = MockAIModel.success(#""urgent""#)
+
+        do {
+            _ = try await generateObject(model: mock, prompt: "priority", output: Output<Priority>.enumeration(Priority.self))
+            XCTFail("Expected enum validation failure")
+        } catch AIError.schemaValidationFailed(let issues) {
+            XCTAssertTrue(issues.contains { $0.path == "$" })
+        }
+    }
+
+    func testGuideEncodesAndDecodesOnlyWrappedValue() throws {
+        let ticket = GuidedTicket(title: "Payment failed")
+        let data = try JSONEncoder().encode(ticket)
+        let json = String(data: data, encoding: .utf8)
+
+        XCTAssertEqual(json, #"{"title":"Payment failed"}"#)
+
+        let decoded = try JSONDecoder().decode(GuidedTicket.self, from: Data(#"{"title":"Refund pending"}"#.utf8))
+        XCTAssertEqual(decoded.title, "Refund pending")
+    }
+
+    func testGuideInitializerStoresMetadata() {
+        let guide = Guide(wrappedValue: "abc", "A title", minimum: 1, maximum: 10, minLength: 2, maxLength: 20, pattern: "^[a-z]+$")
+
+        XCTAssertEqual(guide.wrappedValue, "abc")
+        XCTAssertEqual(guide.description, "A title")
+        XCTAssertEqual(guide.minimum, 1)
+        XCTAssertEqual(guide.maximum, 10)
+        XCTAssertEqual(guide.minLength, 2)
+        XCTAssertEqual(guide.maxLength, 20)
+        XCTAssertEqual(guide.pattern, "^[a-z]+$")
     }
 
     func testStreamObjectYieldsPartialAndFinalObject() async throws {

@@ -122,12 +122,6 @@ let provider = OpenAICompatibleProvider(
     apiKey: cohereKey,
     model: "command-r-plus"
 )
-
-// Reranking (separate provider)
-let reranker = CohereRerankProvider(
-    apiKey: cohereKey,
-    model: "rerank-v3.5"
-)
 ```
 
 ### OpenRouter

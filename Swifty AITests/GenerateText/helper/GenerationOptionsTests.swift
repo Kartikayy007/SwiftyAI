@@ -138,6 +138,82 @@ final class GenerationOptionsTests: XCTestCase {
         XCTAssertNil(capturedBody?["seed"])
     }
 
+    func testTopPSeedAndPenaltiesForwardedToOpenAI() async throws {
+        var capturedBody: [String: Any]?
+        MockURLProtocol.handler = { req in
+            if let body = req.httpBody {
+                capturedBody = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+            }
+            return try mockResponse(statusCode: 200, json: [
+                "id": "chatcmpl-7",
+                "object": "chat.completion",
+                "model": "gpt-4o-mini",
+                "choices": [["index": 0, "message": ["role": "assistant", "content": "ok"], "finish_reason": "stop"]]
+            ])
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: "test", model: "gpt-4o-mini", session: .mock)
+        _ = try await generateText(
+            model: provider,
+            prompt: "hi",
+            options: GenerationOptions(topP: 0.8, seed: 42, presencePenalty: 0.2, frequencyPenalty: 0.4)
+        )
+
+        XCTAssertEqual(capturedBody?["top_p"] as? Double, 0.8)
+        XCTAssertEqual(capturedBody?["seed"] as? Int, 42)
+        XCTAssertEqual(capturedBody?["presence_penalty"] as? Double, 0.2)
+        XCTAssertEqual(capturedBody?["frequency_penalty"] as? Double, 0.4)
+    }
+
+    func testPromptCachingIsNotSerializedForNormalOpenAIGenerateText() async throws {
+        var capturedBody: [String: Any]?
+        MockURLProtocol.handler = { req in
+            if let body = req.httpBody {
+                capturedBody = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+            }
+            return try mockResponse(statusCode: 200, json: [
+                "id": "chatcmpl-8",
+                "object": "chat.completion",
+                "model": "gpt-4o-mini",
+                "choices": [["index": 0, "message": ["role": "assistant", "content": "ok"], "finish_reason": "stop"]]
+            ])
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: "test", model: "gpt-4o-mini", session: .mock)
+        _ = try await generateText(
+            model: provider,
+            prompt: "hi",
+            options: GenerationOptions(promptCaching: .init(cacheKey: "manual", retention: "ephemeral", cachedContent: "cached"))
+        )
+
+        XCTAssertNil(capturedBody?["prompt_cache_key"])
+        XCTAssertNil(capturedBody?["prompt_cache_retention"])
+        XCTAssertNil(capturedBody?["cached_content"])
+    }
+
+    func testPromptCachingIsNotSerializedForNormalOpenAIStreamText() async throws {
+        var capturedBody: [String: Any]?
+        MockURLProtocol.handler = { req in
+            if let body = req.httpBody {
+                capturedBody = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+            }
+            return try mockSSEResponse(chunks: [
+                ["id": "1", "object": "chat.completion.chunk", "model": "gpt-4o-mini", "choices": [["index": 0, "delta": ["content": "ok"], "finish_reason": NSNull()]]],
+                ["id": "2", "object": "chat.completion.chunk", "model": "gpt-4o-mini", "choices": [["index": 0, "delta": [:], "finish_reason": "stop"]]]
+            ])
+        }
+
+        let provider = OpenAICompatibleProvider(baseURL: "https://api.openai.com/v1", apiKey: "test", model: "gpt-4o-mini", session: .mock)
+        for try await _ in streamText(
+            model: provider,
+            prompt: "hi",
+            options: GenerationOptions(promptCaching: .init(cacheKey: "manual", retention: "ephemeral"))
+        ) {}
+
+        XCTAssertNil(capturedBody?["prompt_cache_key"])
+        XCTAssertNil(capturedBody?["prompt_cache_retention"])
+    }
+
     // MARK: - Anthropic
 
     func testTemperatureForwardedToAnthropic() async throws {
