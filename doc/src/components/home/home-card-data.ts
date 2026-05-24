@@ -1,7 +1,7 @@
 export const homeCards = [
   {
     tag: "CORE",
-    date: "MAY 17, 2026",
+    date: "",
     title: "Generate Text with any LLM provider in one call",
     label: "Text Generation",
     description:
@@ -25,7 +25,7 @@ print(response.text)`,
   },
   {
     tag: "MEDIA",
-    date: "MAY 12, 2026",
+    date: "",
     title: "Generate Images from text prompts natively in Swift",
     label: "Image Generation",
     description:
@@ -50,7 +50,7 @@ let imageData = response.images.first?.data`,
   },
   {
     tag: "AUDIO",
-    date: "MAY 5, 2026",
+    date: "",
     title: "Convert Text to Speech with one Swift call",
     label: "Speech",
     description:
@@ -75,11 +75,11 @@ try speech.data.write(to: outputURL)`,
   },
   {
     tag: "AUDIO",
-    date: "APR 28, 2026",
+    date: "",
     title: "Transcribe Audio to Text with Whisper",
     label: "Transcription",
     description:
-      "Convert recorded or streamed audio into accurate text using Whisper — works with any AVAudioFile or Data.",
+      "Convert recorded or streamed audio into accurate text using Provider supported models — works with any AVAudioFile or Data.",
     href: "/docs/audio",
     accent: false,
     snippet: `import SwiftyAI
