@@ -1,43 +1,107 @@
 export const homeCards = [
   {
-    tag: "FEATURED",
+    tag: "CORE",
     date: "MAY 17, 2026",
-    title: "SwiftyAI 1.0 — Native AI for Every Apple Platform",
-    label: "SwiftyAI 1.0",
+    title: "Generate Text with any LLM provider in one call",
+    label: "Text Generation",
     description:
-      "Native AI SDK for every Apple platform — streaming, tool calling, and multimodal from one Swift API.",
-    href: "/docs/quickstart",
+      "Generate text from any LLM provider — streaming or one-shot — with a single native Swift API.",
+    href: "/docs/generate-text",
     accent: true,
+    snippet: `import SwiftyAI
+
+let model = OpenAICompatibleProvider(
+  baseURL: "https://api.openai.com/v1",
+  apiKey: "...",
+  model: "gpt-4o"
+)
+
+let response = try await generateText(
+  model: model,
+  prompt: "Draft a friendly push notification for a habit tracker."
+)
+
+print(response.text)`,
   },
   {
-    tag: "GUIDE",
+    tag: "MEDIA",
     date: "MAY 12, 2026",
-    title: "Stream Text in Real-Time with AsyncSequence",
-    label: "Stream Text",
+    title: "Generate Images from text prompts natively in Swift",
+    label: "Image Generation",
     description:
-      "Wire model output into SwiftUI with AsyncSequence — token-by-token updates without blocking the main thread.",
-    href: "/docs/stream-text",
+      "Create images from text prompts using DALL·E or Stable Diffusion — returns a native Swift data object.",
+    href: "/docs/image-generation",
     accent: false,
+    snippet: `import SwiftyAI
+
+let imageModel = OpenAICompatibleProvider(
+  baseURL: "https://api.openai.com/v1",
+  apiKey: "...",
+  model: "gpt-image-1"
+)
+
+let response = try await generateImage(
+  model: imageModel,
+  prompt: "A clean app icon for a Swift package named SwiftyAI.",
+  options: ImageGenerationOptions(size: .square1024, quality: .high)
+)
+
+let imageData = response.images.first?.data`,
   },
   {
-    tag: "GUIDE",
+    tag: "AUDIO",
     date: "MAY 5, 2026",
-    title: "Tool Calling — Let the Model Drive Your Swift Functions",
-    label: "Tool Calling",
+    title: "Convert Text to Speech with one Swift call",
+    label: "Speech",
     description:
-      "Expose Swift functions as tools so the model can call your app logic safely and predictably.",
-    href: "/docs/tool-calling",
+      "Turn any string into natural-sounding audio. Choose voice, speed, and format — get back AVAudioPlayer-ready Data.",
+    href: "/docs/audio",
     accent: false,
+    snippet: `import SwiftyAI
+
+let speechModel = OpenAICompatibleProvider(
+  baseURL: "https://api.openai.com/v1",
+  apiKey: "...",
+  model: "gpt-4o-mini-tts"
+)
+
+let speech = try await generateSpeech(
+  model: speechModel,
+  text: "You can build and host many different types of applic...",
+  options: SpeechOptions(voice: "alloy", format: .mp3)
+)
+
+try speech.data.write(to: outputURL)`,
   },
   {
-    tag: "GUIDE",
+    tag: "AUDIO",
     date: "APR 28, 2026",
-    title: "SwiftUI Hooks for Reactive AI State",
-    label: "SwiftUI Hooks",
+    title: "Transcribe Audio to Text with Whisper",
+    label: "Transcription",
     description:
-      "Reactive hooks for generation state, errors, and streaming text — built for SwiftUI observation.",
-    href: "/docs/swiftui-hooks",
+      "Convert recorded or streamed audio into accurate text using Whisper — works with any AVAudioFile or Data.",
+    href: "/docs/audio",
     accent: false,
+    snippet: `import SwiftyAI
+
+let transcriptionModel = OpenAICompatibleProvider(
+  baseURL: "https://api.openai.com/v1",
+  apiKey: "...",
+  model: "gpt-4o-transcribe"
+)
+
+let audio = AIAudioInput(
+  data: audioData,
+  filename: "meeting.wav",
+  mediaType: .wav
+)
+
+let transcript = try await transcribe(
+  model: transcriptionModel,
+  audio: audio
+)
+
+print(transcript.text)`,
   },
 ] as const;
 

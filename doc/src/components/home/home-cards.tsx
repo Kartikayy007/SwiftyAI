@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen } from "lucide-react";
 import { homeCards, type HomeCard } from "@/components/home/home-card-data";
 import { gridBorder } from "@/lib/layout-tokens";
 import { cn } from "@/lib/utils";
@@ -62,12 +63,13 @@ export function HomeCards({ className, onCardSelect }: HomeCardsProps) {
           </div>
           <span
             className={cn(
-              "mt-3 text-[10px] font-semibold tracking-widest uppercase sm:mt-4",
+              "mt-3 inline-flex items-center gap-1 text-[10px] font-semibold tracking-widest uppercase sm:mt-4",
               card.accent ? "text-black/70" : "text-muted-foreground"
             )}
             style={{ fontFamily: "var(--font-fira-sans), sans-serif" }}
           >
-            Read →
+            <BookOpen className="h-3 w-3" />
+            Read
           </span>
         </button>
       ))}
