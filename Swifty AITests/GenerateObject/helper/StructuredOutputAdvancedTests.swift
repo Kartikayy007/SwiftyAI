@@ -25,7 +25,7 @@ final class StructuredOutputAdvancedTests: XCTestCase {
 
     private struct GuidedTicket: Codable, Equatable {
         @Guide("Short customer-visible title", minLength: 3, maxLength: 80)
-        var title: String
+        var title: String = ""
     }
 
     func testOutputObjectDecodesAndValidates() async throws {

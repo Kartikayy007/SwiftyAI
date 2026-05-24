@@ -313,3 +313,5 @@ extension Guide: Codable where Value: Codable {
 }
 
 extension Guide: Sendable where Value: Sendable {}
+
+extension Guide: Equatable where Value: Equatable {}

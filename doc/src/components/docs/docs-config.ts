@@ -23,7 +23,6 @@ export const docsNavGroups = [
       { title: "Tools", href: "/docs/tools" },
       { title: "Tool Calling", href: "/docs/tool-calling" },
       { title: "Agent UI Stream", href: "/docs/agent-ui-stream" },
-      { title: "MCP", href: "/docs/mcp" },
     ],
   },
   {
