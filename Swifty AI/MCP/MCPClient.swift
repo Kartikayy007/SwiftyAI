@@ -1,3 +1,4 @@
+/*
 import Foundation
 
 public actor MCPClient {
@@ -110,3 +111,5 @@ public actor MCPClient {
         _ = try await transport.send(data, expectsResponse: false)
     }
 }
+
+*/

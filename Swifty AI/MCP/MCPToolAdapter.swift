@@ -1,3 +1,4 @@
+/*
 import Foundation
 
 public extension MCPTool {
@@ -44,3 +45,5 @@ private func encodeJSONObject(_ object: Any) throws -> String {
     let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
     return String(data: data, encoding: .utf8) ?? ""
 }
+
+*/

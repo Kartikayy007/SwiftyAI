@@ -1,3 +1,4 @@
+/*
 import XCTest
 import SwiftyAI
 
@@ -55,3 +56,5 @@ private struct PackageTestResponse<Result: Encodable>: Encodable {
 private func packageResponse<Result: Encodable>(id: Int, result: Result) throws -> Data {
     try JSONEncoder().encode(PackageTestResponse(id: id, result: result))
 }
+
+*/

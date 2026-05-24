@@ -1,3 +1,4 @@
+/*
 import Foundation
 
 public enum MCPJSONValue: Codable, Equatable, Sendable {
@@ -467,3 +468,5 @@ extension Dictionary where Key == String, Value == MCPJSONValue {
         mapValues(\.jsonObject)
     }
 }
+
+*/
