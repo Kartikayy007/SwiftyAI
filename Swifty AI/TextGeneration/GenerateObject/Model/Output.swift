@@ -25,7 +25,17 @@ public struct Output<T: Decodable> {
         Output<T>(
             schema: .enumeration(T.allCases.map(\.rawValue)),
             decode: { data in
-                let raw = try JSONDecoder().decode(String.self, from: data)
+                let raw: String
+                if let decoded = try? JSONDecoder().decode(String.self, from: data) {
+                    raw = decoded
+                } else if let fragment = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]),
+                          let string = fragment as? String {
+                    raw = string
+                } else {
+                    throw AIError.decodingError(
+                        DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Expected a JSON string for enum value"))
+                    )
+                }
                 guard let value = T(rawValue: raw) else {
                     throw AIError.schemaValidationFailed([.init(path: "$", message: "Unknown enum value \(raw)")])
                 }
