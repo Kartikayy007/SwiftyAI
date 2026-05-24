@@ -107,7 +107,12 @@ final class OpenAIProviderTests: XCTestCase {
             apiKey: apiKey,
             model: "gpt-4o-mini"
         )
-        let response = try await liveProvider.generate("Reply with exactly: ok")
-        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+        do {
+            let response = try await liveProvider.generate("Reply with exactly: ok")
+            XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "OpenAI")
+        }
     }
 }

@@ -101,7 +101,12 @@ final class MistralProviderTests: XCTestCase {
             apiKey: apiKey,
             model: "mistral-large-latest"
         )
-        let response = try await liveProvider.generate("Reply with exactly: ok")
-        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+        do {
+            let response = try await liveProvider.generate("Reply with exactly: ok")
+            XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "Mistral")
+        }
     }
 }

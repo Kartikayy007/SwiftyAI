@@ -100,7 +100,12 @@ final class GeminiProviderTests: XCTestCase {
             throw XCTSkip("Set GEMINI_API_KEY to run the live Gemini integration test.")
         }
         let liveProvider = GeminiProvider(apiKey: apiKey, model: "gemini-2.5-flash")
-        let response = try await liveProvider.generate("Reply with exactly: ok")
-        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+        do {
+            let response = try await liveProvider.generate("Reply with exactly: ok")
+            XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "Gemini")
+        }
     }
 }

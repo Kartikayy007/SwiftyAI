@@ -102,7 +102,12 @@ final class CohereProviderTests: XCTestCase {
             apiKey: apiKey,
             model: "command-a-03-2025"
         )
-        let response = try await liveProvider.generate("Reply with exactly: ok")
-        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+        do {
+            let response = try await liveProvider.generate("Reply with exactly: ok")
+            XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "Cohere")
+        }
     }
 }

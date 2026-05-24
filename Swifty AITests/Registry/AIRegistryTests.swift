@@ -36,15 +36,29 @@ final class AIRegistryTests: XCTestCase {
         await registry.set(.apiKey("sk-test"), for: "openai")
         await registry.set(.apiKey("gemini-test"), for: "gemini")
 
-        XCTAssertTrue(try await registry.resolveImageModel("openai/gpt-image-1") is OpenAICompatibleProvider)
-        XCTAssertTrue(try await registry.resolveTranscriptionModel("openai/gpt-4o-transcribe") is OpenAICompatibleProvider)
-        XCTAssertTrue(try await registry.resolveSpeechModel("openai/gpt-4o-mini-tts") is OpenAICompatibleProvider)
-        XCTAssertTrue(try await registry.resolveVideoModel("openai/sora-2") is OpenAICompatibleProvider)
+        let openaiImage = try await registry.resolveImageModel("openai/gpt-image-1")
+        XCTAssertTrue(openaiImage is OpenAICompatibleProvider)
+        
+        let openaiTranscription = try await registry.resolveTranscriptionModel("openai/gpt-4o-transcribe")
+        XCTAssertTrue(openaiTranscription is OpenAICompatibleProvider)
+        
+        let openaiSpeech = try await registry.resolveSpeechModel("openai/gpt-4o-mini-tts")
+        XCTAssertTrue(openaiSpeech is OpenAICompatibleProvider)
+        
+        let openaiVideo = try await registry.resolveVideoModel("openai/sora-2")
+        XCTAssertTrue(openaiVideo is OpenAICompatibleProvider)
 
-        XCTAssertTrue(try await registry.resolveImageModel("gemini/imagen-4.0-generate-001") is GeminiProvider)
-        XCTAssertTrue(try await registry.resolveTranscriptionModel("gemini/gemini-2.5-flash") is GeminiProvider)
-        XCTAssertTrue(try await registry.resolveSpeechModel("gemini/gemini-2.5-flash-preview-tts") is GeminiProvider)
-        XCTAssertTrue(try await registry.resolveVideoModel("gemini/veo-3.1-generate-preview") is GeminiProvider)
+        let geminiImage = try await registry.resolveImageModel("gemini/imagen-4.0-generate-001")
+        XCTAssertTrue(geminiImage is GeminiProvider)
+        
+        let geminiTranscription = try await registry.resolveTranscriptionModel("gemini/gemini-2.5-flash")
+        XCTAssertTrue(geminiTranscription is GeminiProvider)
+        
+        let geminiSpeech = try await registry.resolveSpeechModel("gemini/gemini-2.5-flash-preview-tts")
+        XCTAssertTrue(geminiSpeech is GeminiProvider)
+        
+        let geminiVideo = try await registry.resolveVideoModel("gemini/veo-3.1-generate-preview")
+        XCTAssertTrue(geminiVideo is GeminiProvider)
     }
 
     func testResolveMediaForUnsupportedGlobalProviderThrows() async throws {

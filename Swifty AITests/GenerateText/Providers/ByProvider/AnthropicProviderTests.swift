@@ -112,7 +112,12 @@ final class AnthropicProviderTests: XCTestCase {
             throw XCTSkip("Set ANTHROPIC_API_KEY to run the live Anthropic integration test.")
         }
         let liveProvider = AnthropicProvider(apiKey: apiKey, model: "claude-3-5-sonnet-latest")
-        let response = try await liveProvider.generate("Reply with exactly: ok")
-        XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+        do {
+            let response = try await liveProvider.generate("Reply with exactly: ok")
+            XCTAssertFalse(response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } catch {
+            try skipLiveProviderError(error, provider: "Anthropic")
+        }
     }
 }

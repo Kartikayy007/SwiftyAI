@@ -333,7 +333,12 @@ func cleanedJSONData(_ text: String) throws -> Data {
 }
 
 func validate(data: Data, schema: AISchema) throws {
-    let value = try JSONSerialization.jsonObject(with: data)
+    let value: Any
+    do {
+        value = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+    } catch {
+        throw AIError.decodingError(error)
+    }
     let issues = schema.validate(value)
     if !issues.isEmpty {
         throw AIError.schemaValidationFailed(issues)

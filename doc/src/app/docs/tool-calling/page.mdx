@@ -126,18 +126,3 @@ let options = ToolExecutionOptions(
 | `.reject(reason: String)` | Skip execution and feed `reason` back to the model as an error result |
 | `.returnResult(String)` | Skip execution and feed the supplied string back as a successful result |
 | `.replaceArguments(String)` | Replace the model's tool arguments with a sanitized JSON string before execution |
-
-### Telemetry Events
-
-`onTelemetry` receives a `ToolTelemetryEvent` enum:
-
-| Case | When |
-| --- | --- |
-| `.requested(call)` | The model requested this tool call |
-| `.approved(call)` | `approval` returned `.execute` or `.replaceArguments` |
-| `.rejected(call, reason:)` | `approval` or `onToolCall` returned `.reject` |
-| `.started(call)` | The tool closure is about to run |
-| `.succeeded(call, result)` | The tool closure returned successfully |
-| `.failed(call, message:)` | The tool closure threw |
-| `.skipped(call, reason:)` | A synthetic result was returned without executing |
-| `.completed(stepIndex:)` | All tool calls for the step finished |
